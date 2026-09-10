@@ -32,8 +32,23 @@ body.deck{width:100vw;height:100vh}
 /* ── 字級階梯（規格第二節） */
 .big{font-family:Gabarito,"NotoTC","PingFang TC",sans-serif;font-weight:900;letter-spacing:-.01em}
 
+/* 封面這兩行的 left 跟別頁不一樣，是刻意的，理由寫在這裡免得下次有人「改回去」。
+   規格第一條是所有東西咬同一條左邊線（x=39）。**中文字的框跟墨不對齊**：
+   147px 的「一」左邊有 5px 空隙，框放 39 墨會落在 44。
+   2026-09-10 之前的寫法是框 39 加副標框 44——**大標靠視覺補償對齊、副標靠框對齊，
+   兩種手法混在同一頁**，而且橫線與頁尾在 39，一頁上有兩條左邊線。
+   **2026-09-10 定案：兩行的框都回到 39，不做視覺補償。**
+   試過補償（大標框挪到 34，墨就落在 39，量出來四樣全咬 39，最好看），
+   **但版面體檢那支分不出「刻意的補償」跟「忘了對齊」**，它拿框比框，
+   補償過的框反而被判成錯，而要豁免它就只能整份豁免 `div.rule`——
+   實測那個豁免會連真的沒對齊一起吞掉（把副標推到 47px 注入一個 8px 的錯，
+   不帶例外時它抓到並回退出碼 1，帶例外就變成 0）。
+   **一個會吞掉真缺陷的例外，比 4px 的視覺漂移貴。**
+   所以現在：框全部 39，墨自己飄（大標 44、副標 40），
+   那是這一份 36 頁本來就在做的事（區隔頁的 147px 標題也一樣沒補償），
+   體檢把它歸在〔墨〕不計入退出碼。**要改回補償，等那支工具能只鎖一頁再說。** */
 .cover .t{position:absolute;left:39px;top:150px;font-size:147px;line-height:1;}
-.cover .sub{position:absolute;left:44px;top:330px;font-size:23px;font-weight:600}
+.cover .sub{position:absolute;left:39px;top:330px;font-size:23px;font-weight:600}
 
 .s.div{background:var(--hero)}
 .s.div .t{position:absolute;left:39px;top:37px;font-size:147px;line-height:1;color:#fff}
