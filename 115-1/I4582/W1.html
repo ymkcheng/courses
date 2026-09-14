@@ -226,9 +226,15 @@ body{font-family:'NotoTC','PingFang TC','Heiti TC',sans-serif;-webkit-font-smoot
    Palantir 第 3 張的條列就是這樣：**看起來像一疊卡，不是一串項目符號**
    （`視覺風格-2026-09-04.md` 第一節第 10 條）。
    換行掛在第一個字下面，所以折到第二行看得出來還是同一條。 */
-.pstack .note > div{position:relative;padding-left:28px;margin-bottom:15px}
+.pstack .note > div{position:relative;padding-left:22px;margin-bottom:15px}
 .pstack .note > div:last-child{margin-bottom:0}
-.pstack .note > div::before{content:"—";position:absolute;left:0;top:0;opacity:.42;font-weight:300}
+/* ⛔ 2026-09-14 Kevin 改：原本是一個破折號 content:"—"，**它會跟中文連成一條線**，
+   看起來不像項目符號像句子的一部分。換成圓點。
+   ⭐ **圓點用 CSS 畫不用字元**（不用 • 或 ·）：CJK 字型對那兩個字元的大小與基線差很多，
+   同一份簡報換一台電腦就會胖瘦不一。畫出來的圓大小由 em 控制，跟著字級縮放。
+   top 是算出來的不是試出來的：行高 1.5em，圓 .26em，置中 = (1.5 - .26) / 2 = .62em。 */
+.pstack .note > div::before{content:"";position:absolute;left:2px;top:.62em;
+  width:.26em;height:.26em;border-radius:50%;background:currentColor;opacity:.42}
 .pstack .main.sm{font-size:44px;line-height:1.32;margin-bottom:6px}
 .w1p .paper.land{width:500px;height:372px;padding:14px 15px;gap:6px}
 /* 紙縮到 470 之後，紙上的字要跟著縮，不然④那一列會穿出紙的右緣。
@@ -299,7 +305,10 @@ body{font-family:'NotoTC','PingFang TC','Heiti TC',sans-serif;-webkit-font-smoot
 .showall .pstack .pbody .txt{flex:0 0 auto;width:100%;text-align:center;margin-bottom:14px}
 .showall .pstack .note{font-size:34px}
 .showall .pstack .note > div{display:inline-block;padding-left:0;margin:0 20px 0 0}
-.showall .pstack .note > div::before{content:"";padding:0}
+/* ⚠️ 這一行 2026-09-14 從 content:"" 改成 display:none。
+   原本靠「把字清空」來藏那個破折號，而現在的圓點是 CSS 畫的方塊，
+   **content 清空它照樣看得見**（寬高與底色都還在）。同一個意圖，換了做法。 */
+.showall .pstack .note > div::before{display:none}
 .showall .paper.land{width:600px;height:440px;padding:17px 18px;gap:7px}
 .showall .prow{min-height:44px;padding:7px 11px}
 .showall .pl{font-size:20px}
