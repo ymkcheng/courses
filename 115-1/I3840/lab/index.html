@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>手機感覺到什麼</title>
+<style>
+  :root{ color-scheme: dark; --底:#0b0d10; --字:#e8eaed; --淡:#8a8f98; --線:#2a2f38; --亮:#7fd1a0; }
+  *{ box-sizing:border-box }
+  body{ margin:0; background:var(--底); color:var(--字); line-height:1.7;
+        font-family:system-ui,"PingFang TC",sans-serif;
+        padding:env(safe-area-inset-top) 16px calc(env(safe-area-inset-bottom) + 24px) }
+  main{ max-width:640px; margin:0 auto }
+  h1{ font-size:1.25rem; margin:16px 0 4px }
+  p.註{ color:var(--淡); margin:0 0 16px; font-size:.9rem }
+  button.大{ width:100%; padding:16px; font-size:1.05rem; border-radius:12px;
+             border:1px solid var(--線); background:#161a20; color:var(--字) }
+  button.大:disabled{ opacity:.45 }
+  section{ border:1px solid var(--線); border-radius:12px; padding:12px 14px; margin:16px 0 }
+  h2{ font-size:.95rem; margin:0 0 8px; color:var(--淡); font-weight:600 }
+  table{ width:100%; border-collapse:collapse; font-size:.9rem }
+  td{ padding:4px 0; border-bottom:1px solid var(--線) }
+  td:last-child{ text-align:right; color:var(--淡) }
+  .摘要{ font-size:1.05rem }
+  .解讀{ font-size:1.15rem; margin:0 0 4px }
+  .夾過{ color:#e0a458; font-size:.85rem }
+  ol{ padding-left:1.2em; font-size:.85rem; color:var(--淡); margin:0; max-height:9em; overflow:auto }
+  svg{ width:100%; height:auto; display:block }
+</style>
+</head>
+<body>
+<main>
+  <h1>手機感覺到什麼</h1>
+  <p class="註">這一頁會一直讀手機的感測器，把它壓成一句話，再交給 AI 去解讀。</p>
+
+  <button class="大" id="開始">開始（會問你要不要給權限）</button>
+
+  <section aria-label="畫面">
+    <svg viewBox="0 0 300 200" role="img" aria-labelledby="圖說">
+      <title id="圖說">一個會跟著手機動作與聲音改變的圖形</title>
+      <circle id="外圈" cx="150" cy="100" r="70" fill="none" stroke="#2a2f38" stroke-width="1"/>
+      <circle id="球" cx="150" cy="100" r="26" fill="#3a7f5c"/>
+      <line id="線" x1="150" y1="100" x2="150" y2="40" stroke="#7fd1a0" stroke-width="2"/>
+    </svg>
+  </section>
+
+  <section aria-label="手機給得出什麼">
+    <h2>手機給得出什麼</h2>
+    <table>
+      <tbody id="能力表">
+        <tr><td>動作與方向</td><td id="能力_動作">還沒問</td></tr>
+        <tr><td>麥克風</td><td id="能力_麥克風">還沒問</td></tr>
+        <tr><td>鏡頭（當亮度計用）</td><td id="能力_鏡頭">還沒問</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section aria-label="這一刻的摘要">
+    <h2>這一刻壓成一句話</h2>
+    <p class="摘要" id="摘要">還沒開始</p>
+  </section>
+
+  <section aria-label="AI 的解讀">
+    <h2>AI 的解讀</h2>
+    <p class="解讀" id="解讀">還沒問</p>
+    <p class="夾過" id="夾過"></p>
+  </section>
+
+  <section aria-label="記錄">
+    <h2>記錄</h2>
+    <ol id="記錄"></ol>
+  </section>
+
+  <video id="鏡頭" playsinline muted style="display:none"></video>
+</main>
+
+<script>
+"use strict";
+
+const $ = (id) => document.getElementById(id);
+const 記 = (s) => { const li=document.createElement("li"); li.textContent=s; $("記錄").prepend(li); };
+
+// ── 狀態 ──────────────────────────────────────────
+const 狀態 = {
+  加速度: 0, 傾斜: 0, 音量: 0, 亮度: null,
+  靜止起點: Date.now(), 上次動: Date.now(),
+  解讀: null,
+};
+
+// ── 第一層：反射。感測器直接改 SVG，不經過 AI ──────
+function 畫() {
+  const 球 = $("球"), 線 = $("線");
+  const r = 20 + Math.min(40, 狀態.音量 * 220);      // 聲音大，球就大
+  球.setAttribute("r", r.toFixed(1));
+  const 角 = (狀態.傾斜 * Math.PI) / 180;
+  線.setAttribute("x2", (150 + Math.sin(角) * 60).toFixed(1));
+  線.setAttribute("y2", (100 - Math.cos(角) * 60).toFixed(1));
+  if (狀態.解讀) {
+    球.setAttribute("fill", 狀態.解讀.顏色);
+    $("外圈").setAttribute("stroke", 狀態.解讀.顏色);
+  }
+  requestAnimationFrame(畫);
+}
+
+// ── 第二層：摘要。把原始數字壓成一句人看得懂的話 ──
+// 這一層是整件事的重點。不要把原始資料丟給 AI，
+// 什麼算一個有意義的事件，要在這裡決定。
+function 做摘要() {
+  const 片 = [];
+
+  const 靜止秒 = Math.round((Date.now() - 狀態.靜止起點) / 1000);
+  if (狀態.加速度 > 3) 片.push("正在大幅移動");
+  else if (狀態.加速度 > 0.8) 片.push("有輕微晃動");
+  else 片.push(`靜止 ${靜止秒} 秒`);
+
+  if (Math.abs(狀態.傾斜) < 20) 片.push("螢幕朝上");
+  else if (Math.abs(狀態.傾斜) > 70) 片.push("立起來拿著");
+
+  if (狀態.音量 > 0.15) 片.push("很吵");
+  else if (狀態.音量 > 0.04) 片.push("有聲音");
+  else 片.push("很安靜");
+
+  if (狀態.亮度 !== null) {
+    if (狀態.亮度 < 40) 片.push("環境很暗");
+    else if (狀態.亮度 < 90) 片.push("光線偏暗");
+    else 片.push("光線明亮");
+  }
+  return 片.join("，");
+}
+
+// ── 第三層：解讀。交給 AI，回來的是介面狀態不是一段話 ──
+let 問中 = false;
+async function 問AI() {
+  if (問中) return;
+  問中 = true;
+  const 摘要 = $("摘要").textContent;
+  try {
+    const r = await fetch("/interpret", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 摘要 }),
+    });
+    if (!r.ok) { 記(`AI 回了 ${r.status}`); return; }
+    const d = await r.json();
+    狀態.解讀 = d;
+    $("解讀").textContent = `${d.解讀}（${d.情緒}）`;
+    $("夾過").textContent = d.夾過 && d.夾過.length
+      ? `⚠️ 模型這次沒照格式，被修過的欄位：${d.夾過.join("、")}`
+      : "";
+    記(`${new Date().toLocaleTimeString()}　${摘要} → ${d.解讀}`);
+  } catch (e) {
+    記("叫不到 AI：" + e.message);
+  } finally {
+    問中 = false;
+  }
+}
+
+// ── 感測器 ────────────────────────────────────────
+async function 接動作() {
+  try {
+    if (typeof DeviceMotionEvent?.requestPermission === "function") {
+      const 答 = await DeviceMotionEvent.requestPermission();      // iOS 一定要問
+      if (答 !== "granted") { $("能力_動作").textContent = "被拒絕"; return; }
+    }
+    if (typeof DeviceOrientationEvent?.requestPermission === "function") {
+      await DeviceOrientationEvent.requestPermission();
+    }
+    addEventListener("devicemotion", (e) => {
+      const a = e.accelerationIncludingGravity;
+      if (!a) return;
+      const 大小 = Math.abs(Math.hypot(a.x || 0, a.y || 0, a.z || 0) - 9.8);
+      狀態.加速度 = 狀態.加速度 * 0.8 + 大小 * 0.2;
+      if (狀態.加速度 > 0.8) 狀態.靜止起點 = Date.now();
+    });
+    addEventListener("deviceorientation", (e) => { 狀態.傾斜 = e.beta ?? 0; });
+    $("能力_動作").textContent = "可以用";
+  } catch (e) {
+    $("能力_動作").textContent = "失敗：" + e.message;
+  }
+}
+
+async function 接麥克風() {
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const 分析 = ctx.createAnalyser();
+    分析.fftSize = 512;
+    ctx.createMediaStreamSource(s).connect(分析);
+    const buf = new Uint8Array(分析.fftSize);
+    (function 量() {
+      分析.getByteTimeDomainData(buf);
+      let 和 = 0;
+      for (const v of buf) 和 += (v - 128) ** 2;
+      狀態.音量 = Math.sqrt(和 / buf.length) / 128;
+      requestAnimationFrame(量);
+    })();
+    $("能力_麥克風").textContent = "可以用";
+  } catch (e) {
+    $("能力_麥克風").textContent = "沒給或不支援";
+  }
+}
+
+// 手機網頁拿不到環境光感測器（iOS 完全沒有），
+// 所以用鏡頭的平均亮度當替代品。
+async function 接鏡頭() {
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    const v = $("鏡頭");
+    v.srcObject = s; await v.play();
+    const c = document.createElement("canvas"); c.width = 32; c.height = 24;
+    const g = c.getContext("2d", { willReadFrequently: true });
+    setInterval(() => {
+      g.drawImage(v, 0, 0, 32, 24);
+      const p = g.getImageData(0, 0, 32, 24).data;
+      let 和 = 0;
+      for (let i = 0; i < p.length; i += 4) 和 += (p[i] + p[i+1] + p[i+2]) / 3;
+      狀態.亮度 = 和 / (p.length / 4);
+    }, 1000);
+    $("能力_鏡頭").textContent = "可以用";
+  } catch (e) {
+    $("能力_鏡頭").textContent = "沒給或不支援";
+  }
+}
+
+// ── 開始 ──────────────────────────────────────────
+$("開始").addEventListener("click", async () => {
+  $("開始").disabled = true;
+  $("開始").textContent = "跑起來了";
+  await 接動作();            // iOS 規定要在使用者按下去的那一刻問
+  await 接麥克風();
+  await 接鏡頭();
+  畫();
+  setInterval(() => { $("摘要").textContent = 做摘要(); }, 1000);
+  setInterval(問AI, 8000);   // 八秒問一次。太密會吃掉額度，而且解讀本來就慢
+  記("開始了。摘要每秒更新，AI 每八秒解讀一次。");
+});
+</script>
+</body>
+</html>
