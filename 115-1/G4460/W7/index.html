@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>大地圖簡報</title>
+<!-- 大地圖簡報的引擎。不要手改這份，內容寫在 JSON，用 scripts/建地圖.py 組出 index.html。 -->
+<style>
+  :root {
+    --ground: #f4efe6; --ink: #1f2a2e; --muted: #6b7377; --paper: #ffffff;
+    --line: #d9d2c5; --accent: #c8412f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--ground);
+    font-family: "PingFang TC", "Noto Sans TC", system-ui, sans-serif; color: var(--ink); }
+  #viewport { position: fixed; inset: 0; overflow: hidden; }
+  #world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  svg#paths { position: absolute; inset: 0; pointer-events: none; }
+  .zone { position: absolute; width: 940px; border-radius: 28px; padding: 48px 56px; background: var(--paper);
+    box-shadow: 0 20px 60px rgba(0,0,0,.08); cursor: pointer; border-top: 18px solid var(--c, var(--line));
+    outline: 6px solid transparent; outline-offset: 10px; transition: outline-color .4s; }
+  .zone.on { outline-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+  .zone h2 { font-size: 64px; line-height: 1.2; margin-bottom: 24px; }
+  .zone p { font-size: 34px; line-height: 1.6; }
+  .zone p + p { margin-top: 14px; }
+  .zone .tag { display: inline-block; font-size: 24px; letter-spacing: .08em; color: var(--muted); margin-bottom: 14px; }
+  .zone.center { width: 1200px; text-align: center; background: var(--ink); color: var(--ground); border-top: 0; }
+  .zone.center h2 { font-size: 110px; }
+  .zone.center p { font-size: 40px; opacity: .8; }
+  .chip { display: inline-block; font-size: 30px; padding: 8px 22px; border-radius: 999px; margin: 8px 10px 0 0; color: #fff; background: var(--muted); }
+  .docline { height: 26px; border-radius: 13px; background: var(--line); margin: 22px 0; }
+  .docline.gap { background: transparent; border: 5px dashed var(--accent); }
+
+  #hud { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); display: flex; gap: 10px; align-items: center;
+    background: rgba(31,42,46,.92); color: var(--ground); padding: 10px 14px; border-radius: 14px; font-size: 15px; z-index: 10;
+    max-width: calc(100vw - 32px); flex-wrap: wrap; justify-content: center; }
+  #hud button { font: inherit; border: 0; border-radius: 9px; padding: 8px 14px; cursor: pointer; background: #3a4a50; color: var(--ground); }
+  #hud button.live { background: var(--accent); }
+  #hud .where { min-width: 7em; text-align: center; opacity: .85; }
+  #caption { position: fixed; left: 50%; top: 18px; transform: translateX(-50%); max-width: min(900px, calc(100vw - 32px));
+    background: rgba(255,255,255,.94); color: var(--ink); padding: 10px 18px; border-radius: 12px; font-size: 18px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.08); display: none; z-index: 10; }
+  #caption .hit { color: var(--accent); font-weight: 700; }
+  #help { position: fixed; right: 16px; top: 16px; font-size: 13px; color: var(--muted); text-align: right; line-height: 1.6; z-index: 9; }
+  body.clean #help, body.clean #caption { display: none !important; }
+</style>
+</head>
+<body>
+<div id="viewport"><div id="world"><svg id="paths"></svg></div></div>
+<div id="caption"></div>
+<div id="help">← → 或空白鍵：下一站<br>0：看全圖　點區塊：飛過去<br>「開始聽」：講到哪就跳到哪　H：藏提示</div>
+<div id="hud">
+  <button id="prev">← 上一站</button>
+  <span class="where" id="where">全圖</span>
+  <button id="next">下一站 →</button>
+  <button id="all">看全圖</button>
+  <button id="mic">🎤 開始聽</button>
+</div>
+
+<script id="deck" type="application/json">{"title": "抽到什麼？都做得出來", "subtitle": "打開袋子，抽一張牌，照牌上寫的做出來", "colors": {"s1": "#8a5a2b", "s2": "#2a6fb5", "s3": "#d23c2f", "s4": "#e07b24", "s5": "#7c4fb0", "s6": "#2f8f4e", "s7": "#d9a915", "s8": "#00979d", "s9": "#d23c2f"}, "titleKeywords": ["回到開頭", "看全圖", "大地圖"], "stations": [{"id": "bag", "name": "打開袋子", "color": "s1", "html": "<style>.mrow{display:flex;gap:22px;align-items:baseline;margin-top:18px}.mrow .mk{flex:none;min-width:5.2em;text-align:center;font-size:26px;font-weight:700;color:#fff;background:var(--c);border-radius:10px;padding:4px 14px;letter-spacing:.06em}.mrow p{font-size:34px;line-height:1.55}.goto{display:inline-block;margin-top:26px;font-size:34px;font-weight:700;color:#fff;background:var(--c);padding:14px 30px;border-radius:16px;text-decoration:none}.zone .qr{position:absolute;right:34px;bottom:30px;margin:0;text-align:center}.zone .qr img{width:190px;height:190px;display:block;border-radius:10px}.zone .qr figcaption{font-size:26px;font-weight:700;margin-top:6px}.zone:has(.qr) .mrow{padding-right:220px}<\/style><div class=\"mrow\"><span class=\"mk\">做什麼<\/span><p>三個人一組，先替小組取一個名字，<br>寫在 A4 第一行，再打開夾鏈袋，<br>照接線圖接好，接上電<\/p><\/div><div class=\"mrow\"><span class=\"mk\">注意<\/span><p>先不要猜袋子裡的東西是做什麼用的<\/p><\/div><div class=\"a4\"><div class=\"card\"><div class=\"now\"><b>一<\/b>我們是 <u><\/u> 組<\/div><\/div><div class=\"side\"><p>一張 A4 橫放對折，<br>立起來像桌牌，<br>正面寫組名<\/p><\/div><\/div><style>\n/* G4460 W7 大地圖的這一週風格（2026-11-03，Kevin「風格要符合當週的主題」）。\n   這一週的底是 Banzi 遇見 Keri Smith（導演本第一節）：\n   中間是一塊 Arduino 板，八站是尋寶書的一頁（膠帶貼著、下緣一條紅帶），站與站之間是杜邦線。\n   範本不改；這份 style 掛在第一站的 htmlFile，排位置之前就生效。名字不上幕，只借樣子。 */\n:root { --ground: #ece0c8; --ink: #22262a; --muted: #6f6656; --paper: #fffcf3; --line: #d8c9a8; --accent: #d23c2f; --board: #00979d; }\nhtml, body { background-color: var(--ground);\n  background-image: radial-gradient(circle, #cdb98f 3px, transparent 3.5px); background-size: 44px 44px; }\n.zone { border-top: 18px solid transparent; border-radius: 6px; box-shadow: 0 3px 0 #d6c7a6, 0 24px 50px rgba(60,40,10,.16); }\n.zone::before, .zone::after { content: \"\"; position: absolute; top: -34px; width: 150px; height: 46px; opacity: .85;\n  background: color-mix(in srgb, var(--c, #e8d79a) 24%, #f4e6b0); box-shadow: 0 2px 4px rgba(0,0,0,.08); }\n.zone::before { left: 40px; transform: rotate(-4deg); }\n.zone::after { right: 40px; transform: rotate(3deg); }\n.zone:not(.center) { padding-bottom: 92px; }\n.zone:not(.center) > .tag { display: block; width: fit-content; font-family: \"SF Mono\", Menlo, monospace; font-weight: 700; color: var(--board); letter-spacing: .12em; }\n.zone:not(.center) > h2 { display: inline; background: linear-gradient(transparent 64%, color-mix(in srgb, var(--c) 32%, transparent) 64%); }\n.zone:not(.center) > h2::after { content: \"\"; display: block; margin-bottom: 24px; }\n.zone:not(.center) .mrow .mk { background: #f1dfa0; color: var(--ink); border-radius: 3px; transform: rotate(-1.5deg); box-shadow: 0 2px 3px rgba(0,0,0,.12); }\n.zone:not(.center) .goto { border-radius: 6px; box-shadow: 0 4px 0 color-mix(in srgb, var(--c) 60%, #000); }\n.redband { position: absolute; left: 0; right: 0; bottom: 0; height: 40px; background: var(--accent); border-radius: 0 0 6px 6px; }\n.zone.center { background: var(--board); color: #fff; border-radius: 34px; border: 0; padding: 110px 80px 120px;\n  box-shadow: 0 6px 0 #006d71, 0 30px 70px rgba(0,60,62,.35); }\n.zone.center::before, .zone.center::after { top: auto; opacity: 1; box-shadow: none; transform: none; height: 26px; width: 620px; left: auto;\n  background: repeating-linear-gradient(90deg, #1b1b1b 0 22px, transparent 22px 34px); border-radius: 3px; }\n.zone.center::before { top: 34px; right: 90px; }\n.zone.center::after { bottom: 34px; right: 90px; width: 460px; }\n.zone.center h2 { color: #fff; letter-spacing: .02em; }\n.zone.center p { color: #e6fbfb; opacity: 1; }\n.zone.center .hole { position: absolute; width: 40px; height: 40px; border-radius: 50%; background: var(--ground); box-shadow: inset 0 0 0 7px #c9d6d6; }\n/* 學生手上那張 A4：橫放對折立起來，每一站多一行（第一站只看到第一行，不預告後面的） */\n.a4 { margin-top: 26px; display: flex; gap: 34px; align-items: center; }\n.a4 .card { position: relative; flex: none; width: 620px; background: #fff; border: 3px solid #22262a; border-radius: 4px; padding: 26px 30px 18px; }\n.a4 .card::before { content: \"\"; position: absolute; left: -3px; right: -3px; top: -18px; height: 16px; border: 3px dashed #8a7d66; border-bottom: 0; border-radius: 4px 4px 0 0; }\n.a4 .card div { font-size: 32px; line-height: 1.35; padding: 8px 0; border-bottom: 2px dotted #b9ab90; color: #8a8478; }\n.a4 .card div:last-child { border-bottom: 0; }\n.a4 .card div.now { color: #22262a; font-weight: 700; }\n.a4 .card b { color: #d23c2f; font-size: 26px; margin-right: 8px; }\n.a4 .card u { text-decoration: none; display: inline-block; min-width: 3.2em; border-bottom: 3px solid currentColor; margin: 0 4px; }\n.a4 .side p { font-size: 30px; line-height: 1.5; }\n<\/style>\n", "keywords": ["打開袋子", "夾鏈袋", "接線圖", "接上電"], "width": 1200}, {"id": "what", "name": "它會做什麼", "color": "s2", "html": "<div class=\"mrow\"><span class=\"mk\">它是誰<\/span><p>你們剛接好的板子和零件<\/p><\/div><div class=\"mrow\"><span class=\"mk\">做什麼<\/span><p>動手去碰、去遮、去擋，出聲或搖一搖，<br>找出它的那一句：「當＿＿，它就＿＿」<\/p><\/div><div class=\"mrow\"><span class=\"mk\">例如<\/span><p>電鍋：當飯煮好了，開關就跳起來<\/p><\/div><div class=\"mrow\"><span class=\"mk\">注意<\/span><p>程式已經燒好了，<br>不用寫程式，也不要換零件<\/p><\/div><div class=\"mrow\"><span class=\"mk\">交什麼<\/span><p>寫在 A4 第二行<\/p><\/div><div class=\"a4\"><div class=\"card\"><div><b>一<\/b>我們是 <u><\/u> 組<\/div><div class=\"now\"><b>二<\/b>當 <u><\/u>，它就 <u><\/u><\/div><\/div><div class=\"side\"><p>接在組名下面<\/p><\/div><\/div>", "keywords": ["會做什麼", "動手去碰", "去遮", "那一句", "它就"], "width": 1100}, {"id": "draw", "name": "抽一張牌", "color": "s3", "html": "<div class=\"mrow\"><span class=\"mk\">做什麼<\/span><p>老師替每一組抽一張牌：<br>給誰、要做到什麼<\/p><\/div><div class=\"mrow\"><span class=\"mk\">例如<\/span><p>給樓下的管理員伯伯，<br>要做到讓他知道有包裹到了<\/p><\/div><div class=\"mrow\"><span class=\"mk\">注意<\/span><p>抽到什麼，就做什麼<\/p><\/div><div class=\"mrow\"><span class=\"mk\">交什麼<\/span><p>寫在 A4 第三行<\/p><\/div><div class=\"a4\"><div class=\"card\"><div><b>一<\/b>我們是 <u><\/u> 組<\/div><div><b>二<\/b>當 <u><\/u>，它就 <u><\/u><\/div><div class=\"now\"><b>三<\/b>給 <u><\/u>，要做到 <u><\/u><\/div><\/div><div class=\"side\"><p>接在那一句下面<\/p><\/div><\/div><a class=\"goto\" href=\"../W7-抽牌/index.html\" target=\"_blank\">開始抽牌<\/a>", "keywords": ["抽牌", "抽一張", "抽到什麼", "開始抽"], "width": 1200}, {"id": "make", "name": "做出來", "color": "s4", "html": "<div class=\"mrow\"><span class=\"mk\">做什麼<\/span><p>用紙、彩色筆、密集板邊角料、熱熔膠，<br>把接好的板子和零件包進去，<br>照牌上寫的做出來<\/p><\/div><div class=\"mrow\"><span class=\"mk\">注意<\/span><p>熱熔膠不要碰到板子<\/p><\/div><div class=\"mrow\"><span class=\"mk\">做好了<\/span><p>全組替它取一個名字，寫在 A4 第四行，<br>A4 立在作品旁邊<\/p><\/div><div class=\"a4\"><div class=\"card\"><div><b>一<\/b>我們是 <u><\/u> 組<\/div><div><b>二<\/b>當 <u><\/u>，它就 <u><\/u><\/div><div><b>三<\/b>給 <u><\/u>，要做到 <u><\/u><\/div><div class=\"now\"><b>四<\/b>作品叫 <u><\/u><\/div><\/div><div class=\"side\"><p>接在牌的下面<\/p><\/div><\/div>", "keywords": ["做出來", "照牌上", "彩色筆", "熱熔膠", "邊角料"], "width": 1200}, {"id": "film", "name": "讓作品動一次", "color": "s5", "html": "<div class=\"mrow\"><span class=\"mk\">做什麼<\/span><p>一個人讓作品動，另外兩個人<br>站在不同位置用自己的手機拍；<br>換人再來，三個人都要拍到一段<\/p><\/div><div class=\"mrow\"><span class=\"mk\">注意<\/span><p>先拍 A4 桌牌，再拍兩件事：<br>你做了什麼、作品有什麼反應<\/p><\/div><div class=\"mrow\"><span class=\"mk\">例如<\/span><p>電鍋：拍到按下開關，也拍到開關跳起來<\/p><\/div><div class=\"mrow\"><span class=\"mk\">交什麼<\/span><p>每個人一段自己拍的影片<\/p><\/div>", "keywords": ["動一次", "用手機拍", "拍幾秒", "拍影片"], "title": "讓作品動一次", "x": 6076, "y": 2110}, {"id": "walk", "name": "逛一圈", "color": "s7", "html": "<div class=\"mrow\"><span class=\"mk\">做什麼<\/span><p>去看別組的作品，<br>先讀它旁邊那張 A4<\/p><\/div><div class=\"mrow\"><span class=\"mk\">想一想<\/span><p>找一組袋子的內容物跟你們差不多的，<br>做出來的東西差在哪<\/p><\/div>", "keywords": ["逛一圈", "別組", "去看看"]}, {"id": "picker", "name": "請愛拾荒的發明家來", "color": "s6", "html": "<div class=\"mrow\"><span class=\"mk\">先匯入<\/span><p>掃碼，按「建立副本」；<br>打開 Gemini，按輸入框左邊的＋，<br>選雲端，切成清單，選那份副本，<br>往下捲按「插入」<\/p><\/div><div class=\"mrow\"><span class=\"mk\">再安裝<\/span><p>輸入「請把這份文件存成我的技能」，<br>它說存好了，就在同一段對話接著輸入<\/p><\/div><div class=\"mrow\"><span class=\"mk\">叫發明家來<\/span><p>輸入「請愛拾荒的發明家帶我」<\/p><\/div><div class=\"mrow\"><span class=\"mk\">看到這句就停<\/span><p>它回「從打開袋子到現在，<br>發生了什麼？」就是裝好了，<br>課堂先停在這裡<\/p><\/div><div class=\"mrow\"><span class=\"mk\">一分鐘沒回<\/span><p>按停止，再送一次同一句<\/p><\/div><figure class=\"qr\"><img src=\"撿東西的人QR.png\" alt=\"愛拾荒的發明家的碼\"><figcaption>愛拾荒的發明家<\/figcaption><\/figure>", "keywords": ["愛拾荒的發明家", "建立副本", "存成我的技能", "Gemini"], "width": 1100, "title": "請愛拾荒的發明家來"}, {"id": "chat", "name": "回家跟發明家聊", "title": "回家跟愛拾荒的發明家聊", "color": "s6", "html": "<div class=\"mrow\"><span class=\"mk\">什麼時候<\/span><p>今天晚上 10 點前，<br>回到課堂那一段對話接著聊<\/p><\/div><div class=\"mrow\"><span class=\"mk\">做什麼<\/span><p>想到什麼就說什麼，<br>發明家一次問一題，用你自己的話回答<\/p><\/div><div class=\"mrow\"><span class=\"mk\">聊夠了<\/span><p>發明家會問你要不要匯出，你回「要」，<br>它就做成一份 Google 文件<\/p><\/div><div class=\"mrow\"><span class=\"mk\">交什麼<\/span><p>打開文件，按共用，改成知道連結的任何人，<br>複製連結，第九站交<\/p><\/div>", "keywords": ["回家跟發明家聊", "一次問一題", "匯出", "Google 文件", "今天晚上"], "width": 1200}, {"id": "submit", "name": "交出去", "color": "s8", "html": "<div class=\"mrow\"><span class=\"mk\">課堂交<\/span><p>自己拍的那段影片，<br>選 W7、課堂<\/p><\/div><div class=\"mrow\"><span class=\"mk\">今晚 10 點前交<\/span><p>自己的文件連結，<br>選 W7、回家<\/p><\/div><div class=\"mrow\"><span class=\"mk\">注意<\/span><p>每個人都交，同一張表單交兩次<\/p><\/div><div class=\"mrow\"><span class=\"mk\">影片交完<\/span><p>把板子和零件拆下來放回夾鏈袋，交給老師；<br>外殼和 A4 桌牌帶走<\/p><\/div><figure class=\"qr\"><img src=\"每週上傳-QR.png\" alt=\"上傳的碼\"><figcaption>上傳<\/figcaption><\/figure>", "keywords": ["交出去", "上傳表單", "每週上傳", "上傳"], "width": 1100}, {"id": "theory", "name": "背後的道理", "title": "這一週背後的道理", "color": "s9", "html": "<style>.names{display:flex;flex-wrap:wrap;gap:22px 26px;margin-top:18px}.names span{font-size:52px;font-weight:800;line-height:1.2;color:#fff;background:var(--board,#00979d);border-radius:10px;padding:14px 30px;box-shadow:0 5px 0 #006d71}<\/style><div class=\"names\"><span>寬牆<\/span><span>限制<\/span><span>使用者的工具箱<\/span><\/div>", "keywords": ["背後的道理", "寬牆", "使用者的工具箱"], "width": 1100}]}</script>
+<script src="lib/gsap.min.js"></script>
+
+<script>
+  const DECK = JSON.parse(document.getElementById("deck").textContent);
+  const world = document.getElementById("world"), svg = document.getElementById("paths");
+  const whereEl = document.getElementById("where");
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  if (DECK.title) document.title = DECK.title;
+  for (const [k, v] of Object.entries(DECK.colors || {})) document.documentElement.style.setProperty("--" + k, v);
+  const col = c => !c ? null : c.startsWith("#") ? c : `var(--${c})`;
+
+  // ── 1. 把每一站畫出來 ──
+  const stations = DECK.stations;
+  const n = stations.length;
+  const grow = Math.max(1, n / 6);
+  const W = Math.round(4200 * grow), H = Math.round(2600 * grow);
+  world.style.width = W + "px"; world.style.height = H + "px";
+  svg.setAttribute("width", W); svg.setAttribute("height", H); svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+
+  function zoneHTML(st, i) {
+    let h = "";
+    if (st.tag !== false) h += `<span class="tag">${esc(st.tag || `第${"一二三四五六七八九十"[i] || i + 1}站`)}</span>`;
+    h += `<h2>${esc(st.title || st.name)}</h2>`;
+    for (const p of st.body || []) h += `<p>${esc(p)}</p>`;
+    if (st.chips) h += `<div>${st.chips.map(c => `<span class="chip" style="background:${col(c.color) || "var(--muted)"}">${esc(c.text)}</span>`).join("")}</div>`;
+    if (st.html) h += st.html;   // 需要畫圖示的站才用，內容由寫 JSON 的人負責
+    return h;
+  }
+  const center = document.createElement("section");
+  center.className = "zone center"; center.id = "z-title"; center.dataset.name = "開頭";
+  center.innerHTML = `<h2>${esc(DECK.title || "")}</h2>` + (DECK.subtitle ? `<p>${esc(DECK.subtitle)}</p>` : "");
+  world.appendChild(center);
+  stations.forEach((st, i) => {
+    const z = document.createElement("section");
+    z.className = "zone"; z.id = "z-" + st.id; z.dataset.name = st.name;
+    if (st.color) z.style.setProperty("--c", col(st.color));
+    if (st.width) z.style.width = st.width + "px";
+    z.innerHTML = zoneHTML(st, i);
+    world.appendChild(z);
+  });
+
+  // ── 2. 排位置：主題在中間，各站沿橢圓順時針排，從左上開始 ──
+  function place(el, cx, cy) { el.style.left = (cx - el.offsetWidth / 2) + "px"; el.style.top = (cy - el.offsetHeight / 2) + "px"; }
+  place(center, W / 2, H / 2);
+  const rx = W * 0.37, ry = H * 0.35, a0 = DECK.startAngle ?? -150;
+  stations.forEach((st, i) => {
+    const el = document.getElementById("z-" + st.id);
+    if (st.x != null && st.y != null) return place(el, st.x, st.y);
+    const a = (a0 + 360 * i / n) * Math.PI / 180;
+    place(el, W / 2 + rx * Math.cos(a), H / 2 + ry * Math.sin(a));
+  });
+
+  // ── 3. 站與站之間畫虛線路，從主題拉一條到第一站 ──
+  const mid = el => ({ x: el.offsetLeft + el.offsetWidth / 2, y: el.offsetTop + el.offsetHeight / 2 });
+  const chain = [center, ...stations.map(st => document.getElementById("z-" + st.id))];
+  let d = "";
+  for (let i = 0; i < chain.length - 1; i++) {
+    const a = mid(chain[i]), b = mid(chain[i + 1]);
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    const cx = mx + (W / 2 - mx) * -0.18, cy = my + (H / 2 - my) * -0.18;   // 往外彎一點
+    d += `M${a.x} ${a.y} Q${cx} ${cy} ${b.x} ${b.y} `;
+  }
+  svg.innerHTML = `<path d="${d}" fill="none" stroke="#cfc6b6" stroke-width="10" stroke-dasharray="4 26" stroke-linecap="round"/>`;
+
+  // ── 4. 鏡頭 ──
+  const ORDER = ["z-title", ...stations.map(st => "z-" + st.id), "z-title"];
+  let cam = { x: 0, y: 0, s: 1 }, anim = null, step = -1, current = null;
+  // 站內動畫掛在這裡：deckHooks["z-站id"] = { enter(), step() 回傳 true 表示這一下被站內用掉了, leave() }
+  const hooks = window.deckHooks = {};
+  const apply = () => world.style.transform = `translate(${cam.x}px, ${cam.y}px) scale(${cam.s})`;
+  const hudH = () => document.body.classList.contains("clean") ? 0 : 70;
+  function camFor(r, pad) {
+    const vw = innerWidth, vh = innerHeight - hudH();
+    const s = Math.min(vw / (r.w + pad * 2), vh / (r.h + pad * 2));
+    return { s, x: vw / 2 - (r.x + r.w / 2) * s, y: vh / 2 - (r.y + r.h / 2) * s };
+  }
+  const rectOf = id => { const el = document.getElementById(id); return { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight }; };
+  function allRect() {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const el of chain) { x0 = Math.min(x0, el.offsetLeft); y0 = Math.min(y0, el.offsetTop);
+      x1 = Math.max(x1, el.offsetLeft + el.offsetWidth); y1 = Math.max(y1, el.offsetTop + el.offsetHeight); }
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  }
+
+  // 飛過去：遠距離時中途拉遠 35%，像在地圖上移動
+  function flyTo(target, ms = DECK.flyMs || 1300) {
+    if (anim) cancelAnimationFrame(anim);
+    const from = { ...cam }, t0 = performance.now();
+    const dip = Math.hypot(target.x - from.x, target.y - from.y) > 200 ? 0.35 : 0;
+    const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    const tick = now => {
+      const t = Math.min(1, (now - t0) / ms), e = ease(t);
+      const s = Math.exp(Math.log(from.s) + (Math.log(target.s) - Math.log(from.s)) * e) * (1 - dip * Math.sin(Math.PI * e));
+      const vw = innerWidth / 2, vh = (innerHeight - hudH()) / 2;
+      const cx0 = (vw - from.x) / from.s, cy0 = (vh - from.y) / from.s;
+      const cx1 = (vw - target.x) / target.s, cy1 = (vh - target.y) / target.s;
+      const cx = cx0 + (cx1 - cx0) * e, cy = cy0 + (cy1 - cy0) * e;
+      cam = { s, x: vw - cx * s, y: vh - cy * s }; apply();
+      if (t < 1) anim = requestAnimationFrame(tick); else { cam = target; apply(); anim = null; }
+    };
+    anim = requestAnimationFrame(tick);
+  }
+  function go(id) {
+    if (current !== id) { hooks[current]?.leave?.(); setTimeout(() => current === id && hooks[id]?.enter?.(), (DECK.flyMs || 1300) * 0.8); }
+    current = id;
+    document.querySelectorAll(".zone").forEach(z => z.classList.toggle("on", z.id === id));
+    whereEl.textContent = document.getElementById(id).dataset.name;
+    flyTo(camFor(rectOf(id), 140));
+  }
+  function overview() {
+    hooks[current]?.leave?.();
+    current = null; step = -1;
+    document.querySelectorAll(".zone").forEach(z => z.classList.remove("on"));
+    whereEl.textContent = "全圖";
+    flyTo(camFor(allRect(), 60));
+  }
+  const next = () => { if (current && hooks[current]?.step?.()) return; step = Math.min(step + 1, ORDER.length - 1); go(ORDER[step]); };
+  const prev = () => { step = Math.max(step - 1, 0); go(ORDER[step]); };
+
+  document.getElementById("next").onclick = next;
+  document.getElementById("prev").onclick = prev;
+  document.getElementById("all").onclick = overview;
+  document.querySelectorAll(".zone").forEach(z => z.addEventListener("click", () => { step = ORDER.indexOf(z.id); go(z.id); }));
+  addEventListener("keydown", e => {
+    if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") { e.preventDefault(); next(); }
+    else if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); prev(); }
+    else if (e.key === "0" || e.key === "Escape") overview();
+    else if (e.key === "h" || e.key === "H") document.body.classList.toggle("clean");
+  });
+  addEventListener("resize", () => { cam = current ? camFor(rectOf(current), 140) : camFor(allRect(), 60); apply(); });
+
+  // ── 5. 聽話跳：瀏覽器內建語音辨識，聽到關鍵詞就飛過去 ──
+  const KEYWORDS = { "z-title": DECK.titleKeywords || ["回到開頭", "大地圖", "看全圖"] };
+  stations.forEach(st => KEYWORDS["z-" + st.id] = st.keywords || [st.name]);
+  const VOICE_NEXT = ["下一站", "下一步"], VOICE_PREV = ["上一站"];
+  const micBtn = document.getElementById("mic"), cap = document.getElementById("caption");
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null, listening = false, lastJump = 0, handled = "";
+
+  // 同一句裡講到好幾站的詞，跳到最後講到的那一站。比的是詞的結尾，
+  // 所以「設計文件」與「文件」同時中時，結尾一樣，取長的那個
+  function matchZone(text) {
+    let best = null, bestEnd = -1;
+    for (const [id, words] of Object.entries(KEYWORDS))
+      for (const w of words) {
+        const p = text.lastIndexOf(w); if (p < 0) continue;
+        const end = p + w.length;
+        if (end > bestEnd || (end === bestEnd && w.length > best.w.length)) { bestEnd = end; best = { id, w }; }
+      }
+    return best;
+  }
+  function showCaption(text, hit) {
+    cap.style.display = "block";
+    const t = text.slice(-60), i = hit ? t.lastIndexOf(hit.w) : -1;
+    cap.innerHTML = i >= 0 ? `${esc(t.slice(0, i))}<span class="hit">${esc(hit.w)}</span>${esc(t.slice(i + hit.w.length))}` : esc(t);
+  }
+  function startListening() {
+    if (!SR) { cap.style.display = "block"; cap.textContent = "這個瀏覽器不支援語音辨識，請用 Chrome 開。"; return; }
+    rec = new SR();
+    rec.lang = DECK.lang || "zh-TW"; rec.continuous = true; rec.interimResults = true;
+    rec.onresult = e => {
+      const r = e.results[e.results.length - 1], text = r[0].transcript;
+      // 只看這一句還沒處理過的那一段，避免同一個詞被反覆觸發
+      const fresh = text.startsWith(handled) ? text.slice(handled.length) : text;
+      const hit = matchZone(fresh);
+      showCaption(text, hit);
+      if (performance.now() - lastJump < 1500) return;
+      if (VOICE_NEXT.some(w => fresh.includes(w))) { lastJump = performance.now(); handled = text; next(); }
+      else if (VOICE_PREV.some(w => fresh.includes(w))) { lastJump = performance.now(); handled = text; prev(); }
+      else if (hit && hit.id !== current) { lastJump = performance.now(); handled = text; step = ORDER.indexOf(hit.id); go(hit.id); }
+      if (r.isFinal) handled = "";
+    };
+    rec.onerror = e => { cap.style.display = "block"; cap.textContent = "語音辨識停了：" + e.error; };
+    rec.onend = () => { if (listening) rec.start(); };
+    rec.start(); listening = true;
+    micBtn.textContent = "■ 停止聽"; micBtn.classList.add("live");
+    cap.style.display = "block"; cap.textContent = "在聽了，開始講吧。";
+  }
+  function stopListening() {
+    listening = false; if (rec) rec.stop();
+    micBtn.textContent = "🎤 開始聽"; micBtn.classList.remove("live");
+    setTimeout(() => cap.style.display = "none", 800);
+  }
+  micBtn.onclick = () => listening ? stopListening() : startListening();
+
+  window.__deck = { matchZone, go, overview, next, ORDER };   // 給驗收用
+  cam = camFor(allRect(), 60); apply();
+</script>
+<script>
+// G4460 W7 大地圖的這一週風格，配 風格.html。
+// 站與站之間的虛線換成杜邦線：每一段用要去的那一站的顏色；每一頁下緣加紅帶；中間那塊板加四個螺絲孔。
+(() => {
+  const svg = document.getElementById("paths");
+  const p = svg.querySelector("path");
+  if (p) {
+    const segs = p.getAttribute("d").trim().split(/(?=M)/);
+    const ids = window.__deck.ORDER.filter(id => id !== "z-title");
+    const ns = "http://www.w3.org/2000/svg";
+    svg.innerHTML = "";
+    segs.forEach((d, i) => {
+      const z = document.getElementById(ids[i]);
+      const c = z ? getComputedStyle(z).getPropertyValue("--c").trim() : "#888";
+      for (const [w, col, op] of [[30, "rgba(60,40,10,.18)", 1], [22, c, 1], [6, "#fff", .35]]) {
+        const e = document.createElementNS(ns, "path");
+        e.setAttribute("d", d); e.setAttribute("fill", "none"); e.setAttribute("stroke", col);
+        e.setAttribute("stroke-width", w); e.setAttribute("stroke-linecap", "round"); e.setAttribute("opacity", op);
+        if (w === 30) e.setAttribute("transform", "translate(0 6)");
+        if (w === 6) e.setAttribute("transform", "translate(-4 -5)");
+        svg.appendChild(e);
+      }
+    });
+  }
+  for (const id of ids()) {
+    const z = document.getElementById(id);
+    if (!z.querySelector(".redband")) { const b = document.createElement("div"); b.className = "redband"; z.appendChild(b); }
+  }
+  const c = document.getElementById("z-title");
+  for (const [x, y] of [["34px", "34px"], ["calc(100% - 74px)", "34px"], ["34px", "calc(100% - 74px)"], ["calc(100% - 74px)", "calc(100% - 74px)"]]) {
+    const h = document.createElement("i"); h.className = "hole"; h.style.left = x; h.style.top = y; c.appendChild(h);
+  }
+  function ids() { return window.__deck.ORDER.filter(id => id !== "z-title"); }
+})();
+
+</script>
+<script>
+// G4460 W7 大地圖：還沒到的站只看得到第幾站和站名，飛到了才揭開（Kevin 2026-10-31 選）。
+// 引擎是大地圖簡報技能的範本，不改它；這份只掛在 deckHooks 上。
+// 揭開：蓋板碎成小塊飛散、光點從站名噴出、內容一行一行浮上來。電腦設成減少動態效果時只淡入。
+// 按 L 全部重新蓋起來（排練用）；按 C 或點站名，只蓋或揭開目前這一站。
+(() => {
+  const css = document.createElement("style");
+  css.textContent = `
+    .zone.locked > :not(.tag):not(h2):not(.veil) { visibility: hidden; }
+    .veil { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 0 0 28px 28px; pointer-events: none; }
+    .veil i { position: absolute; display: block; border-radius: 6px;
+      background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--c) 22%, #fff) 0 18px, color-mix(in srgb, var(--c) 12%, #fff) 18px 36px); }
+    .spark { position: absolute; width: 18px; height: 18px; border-radius: 50%; background: var(--c); pointer-events: none; }
+    .ring { position: absolute; border: 6px solid var(--c); border-radius: 50%; pointer-events: none; }
+  `;
+  document.head.appendChild(css);
+
+  // 大標題斷在問號後面，不讓「來」一個字掉到第二行（範本會跳脫標題裡的 HTML，所以在這裡換行）
+  const th = document.querySelector("#z-title h2");
+  th.innerHTML = th.innerHTML.replace("？", "？<br>");
+
+  const COLS = 8, ROWS = 4;
+  const zones = window.__deck.ORDER.filter(id => id !== "z-title").map(id => document.getElementById(id));
+  const playing = {};
+  let reduced = false;
+  gsap.matchMedia().add("(prefers-reduced-motion: reduce)", () => { reduced = true; return () => { reduced = false; }; });
+
+  function lock(z) {
+    z.querySelector(".veil")?.remove();
+    const h2 = z.querySelector("h2");
+    const top = h2.offsetTop + h2.offsetHeight + 12;
+    const veil = document.createElement("div");
+    veil.className = "veil"; veil.style.top = top + "px";
+    const w = z.offsetWidth, h = z.offsetHeight - top, gap = 6;
+    const tw = (w - gap * (COLS + 1)) / COLS, th = (h - gap * (ROWS + 1)) / ROWS;
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      const t = document.createElement("i");
+      Object.assign(t.style, { left: gap + c * (tw + gap) + "px", top: gap + r * (th + gap) + "px", width: tw + "px", height: th + "px" });
+      veil.appendChild(t);
+    }
+    z.appendChild(veil);
+    z.classList.add("locked");
+    gsap.set(z.querySelectorAll(":scope > :not(.tag):not(h2):not(.veil)"), { clearProps: "all" });
+  }
+
+  function reveal(z) {
+    if (!z.classList.contains("locked")) return;
+    const veil = z.querySelector(".veil"), tiles = veil.querySelectorAll("i");
+    const body = z.querySelectorAll(":scope > :not(.tag):not(h2):not(.veil)");
+    const marks = z.querySelectorAll(".mk, .goto");
+    z.classList.remove("locked");
+    const tl = gsap.timeline({ onComplete: () => { veil.remove(); delete playing[z.id]; } });
+    playing[z.id] = tl;
+
+    if (reduced) {
+      tl.to(veil, { opacity: 0, duration: 0.4 }).from(body, { opacity: 0, duration: 0.4 }, 0);
+      return;
+    }
+    const h2 = z.querySelector("h2");
+    const ox = h2.offsetLeft + Math.min(h2.offsetWidth, 420) / 2, oy = h2.offsetTop + h2.offsetHeight / 2;
+
+    // 一、站名先抖一下、亮一下，告訴眼睛「要開了」
+    tl.addLabel("charge")
+      .to(h2, { scale: 1.08, duration: 0.25, ease: "power2.out", transformOrigin: "left center" }, "charge")
+      .to(h2, { scale: 1, duration: 0.5, ease: "elastic.out(1, 0.4)" }, "charge+=0.25");
+
+    // 二、光圈與光點從站名噴出
+    tl.addLabel("burst", "charge+=0.25");
+    for (let k = 0; k < 2; k++) {
+      const ring = document.createElement("div"); ring.className = "ring";
+      Object.assign(ring.style, { left: ox - 60 + "px", top: oy - 60 + "px", width: "120px", height: "120px" });
+      z.appendChild(ring);
+      tl.fromTo(ring, { scale: 0.2, opacity: 0.6 }, { scale: 9 + k * 4, opacity: 0, duration: 0.9 + k * 0.2, ease: "power2.out", onComplete: () => ring.remove() }, `burst+=${k * 0.12}`);
+    }
+    for (let k = 0; k < 28; k++) {
+      const s = document.createElement("div"); s.className = "spark";
+      Object.assign(s.style, { left: ox - 9 + "px", top: oy - 9 + "px" });
+      z.appendChild(s);
+      const a = Math.random() * Math.PI * 2, d = 260 + Math.random() * 520;
+      tl.to(s, { x: Math.cos(a) * d, y: Math.sin(a) * d, scale: 0.2 + Math.random() * 0.8, opacity: 0,
+        duration: 0.7 + Math.random() * 0.5, ease: "power3.out", onComplete: () => s.remove() }, "burst");
+    }
+
+    // 三、蓋板從中間往外碎開
+    tl.to(tiles, { x: () => gsap.utils.random(-260, 260), y: () => gsap.utils.random(120, 420), rotation: () => gsap.utils.random(-120, 120),
+      scale: 0.3, opacity: 0, duration: 0.8, ease: "power2.in", stagger: { each: 0.02, from: "center", grid: [ROWS, COLS] } }, "burst+=0.05");
+
+    // 四、內容一行一行浮上來，標籤蓋章似地砸進來
+    tl.from(body, { y: 50, opacity: 0, filter: "blur(10px)", duration: 0.6, ease: "power3.out", stagger: 0.14, clearProps: "filter" }, "burst+=0.35")
+      .from(marks, { scale: 1.8, opacity: 0, duration: 0.45, ease: "back.out(3)", stagger: 0.14 }, "burst+=0.45");
+  }
+
+  // 11/3 Kevin 問「打開內容後又可以手動把內容遮蓋起來嗎」：在那一站按 C 或點站名，蓋回去；再按一次 C、點站名或按 →，重新揭開
+  let here = null;
+  function toggle(z) {
+    if (!z) return;
+    playing[z.id]?.progress(1);
+    if (z.classList.contains("locked")) reveal(z); else lock(z);
+  }
+  zones.forEach(z => {
+    lock(z);
+    window.deckHooks[z.id] = {
+      enter: () => { here = z; reveal(z); },
+      // 還在揭開時按 →，先把這一段播完，不換站；手動蓋起來的站按 →，先揭開
+      step: () => {
+        const tl = playing[z.id]; if (tl && tl.isActive()) { tl.progress(1); return true; }
+        if (z.classList.contains("locked")) { reveal(z); return true; }
+        return false;
+      },
+      leave: () => { playing[z.id]?.progress(1); if (here === z) here = null; },
+    };
+    z.querySelector("h2").addEventListener("click", e => { if (here === z) { e.stopPropagation(); toggle(z); } });
+  });
+
+  addEventListener("keydown", e => {
+    if (e.key === "l" || e.key === "L") zones.forEach(z => { playing[z.id]?.progress(1); lock(z); });
+    if (e.key === "c" || e.key === "C") toggle(here);
+  });
+  window.__reveal = { reveal, lock, zones };   // 給驗收用
+})();
+
+</script>
+<script>
+// G4460 W7 大地圖：拿掉語音（Kevin 2026-11-03：「語音輸入部分可以刪除，我覺得沒有必要」）。做法照 I3840 同日那一份。
+// 範本在大腦裡不能改，所以由這一份地圖自己拿掉：開始聽的按鈕、字幕列、說明裡那一行。上課用按鍵或點區塊換站。
+(() => {
+  const mic = document.getElementById("mic");
+  if (mic) mic.remove();
+  const cap = document.getElementById("caption");
+  if (cap) cap.remove();
+  const help = document.getElementById("help");
+  if (help) help.innerHTML = "← → 或空白鍵：下一站<br>0：看全圖　點區塊：飛過去<br>C 或點站名：蓋上／打開這一站　H：藏提示";
+})();
+
+</script>
+<script>
+// G4460 W7 大地圖：抽牌疊在大地圖上，不開新分頁（Kevin 2026-11-03 選「疊在大地圖上」）。
+// 第三站的「開始抽牌」按下去，抽牌頁蓋滿整個畫面；按 Esc 或右上角的 × 收起來，回到第三站。
+// 抽牌頁只建一次、收起來不關，抽過的牌記得住；收起來時把抽過的牌列在第三站，逛一圈或撿東西的人問起時查得到。
+(() => {
+  const css = document.createElement("style");
+  css.textContent = `
+    #drawLayer { position: fixed; inset: 0; z-index: 50; background: #041f21; display: none; }
+    #drawLayer.on { display: block; }
+    #drawLayer iframe { width: 100%; height: 100%; border: 0; display: block; }
+    #drawLayer .x { position: absolute; left: 18px; top: 16px; z-index: 2; font: 600 18px "PingFang TC", sans-serif; color: #e6fbfb;
+      background: rgba(4,31,33,.6); border: 1px solid rgba(230,251,251,.3); border-radius: 20px; padding: 6px 16px; cursor: pointer; }
+    .drawnlist { margin-top: 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 26px; }
+    .drawnlist .h { grid-column: 1 / -1; font-size: 24px; font-weight: 700; color: var(--muted); }
+    .drawnlist div { font-size: 24px; line-height: 1.4; }
+    .drawnlist b { color: #d23c2f; }
+  `;
+  document.head.appendChild(css);
+
+  const layer = document.createElement("div");
+  layer.id = "drawLayer";
+  layer.innerHTML = '<button class="x">× 收起來（Esc）</button>';
+  document.body.appendChild(layer);
+  let frame = null;
+
+  const zone = document.getElementById("z-draw");
+  const btn = zone.querySelector(".goto");
+
+  function open() {
+    if (!frame) {
+      frame = document.createElement("iframe");
+      frame.src = btn.getAttribute("href");
+      frame.addEventListener("load", () => {
+        frame.contentWindow.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+        frame.contentWindow.focus();
+      });
+      layer.appendChild(frame);
+    }
+    layer.classList.add("on");
+    if (frame.contentWindow) frame.contentWindow.focus();
+  }
+  function close() {
+    layer.classList.remove("on");
+    window.focus();
+    const drawn = (frame && frame.contentWindow && frame.contentWindow.__drawn) || [];
+    let box = zone.querySelector(".drawnlist");
+    if (!drawn.length) { if (box) box.remove(); return; }
+    if (!box) { box = document.createElement("div"); box.className = "drawnlist"; btn.after(box); }
+    const t = s => s.replace(/\n/g, "");
+    box.innerHTML = '<div class="h">抽過的牌</div>' +
+      drawn.map(([who, what], k) => `<div>${k + 1}. 給${t(who)}，要做到<b>${t(what)}</b></div>`).join("");
+  }
+
+  btn.removeAttribute("target");
+  btn.addEventListener("click", e => { e.preventDefault(); e.stopPropagation(); open(); });
+  layer.querySelector(".x").addEventListener("click", close);
+  // 疊著的時候，大地圖自己的按鍵（Esc 看全圖、方向鍵換站）先不動作
+  document.addEventListener("keydown", e => {
+    if (!layer.classList.contains("on")) return;
+    e.stopPropagation();
+    if (e.key === "Escape") close();
+  }, true);
+})();
+
+</script>
+
+</body>
+</html>

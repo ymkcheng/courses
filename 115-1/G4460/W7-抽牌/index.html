@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>抽一張牌</title>
+<link rel="icon" href="data:,">
+<!-- G4460 W7 抽牌頁（樣品第二版，2026-10-31）。three.js 0.186.0（MIT）、GSAP 3.15.0 加 CustomEase、CustomWiggle（免費授權）放在 lib/。
+     節奏與為什麼這樣排見同資料夾 分鏡時間表.md。
+     操作：空白鍵洗牌；點一張牌抽出；翻開倒著時再點一下直接轉正；揭曉時再點一下直接出「要做到什麼」；再點一下收進已抽區；M 開關聲音；R 重來。
+     牌的內容是假設的，等實驗室清點裝置後換。 -->
+<style>
+  /* 2026-11-03 換成 W7 這一週的風格（跟大地圖同一套）：底是 Arduino 板的綠藍，牌背做成板子，翻開的紅帶照舊。 */
+  :root { --bg1:#041f21; --bg2:#0b5557; --ink:#f5efe2; }
+  html,body { margin:0; height:100%; overflow:hidden; background:radial-gradient(ellipse at 50% 40%, var(--bg2), var(--bg1) 70%); }
+  canvas { display:block; }
+  #title { position:fixed; top:4vh; left:0; right:0; text-align:center; color:var(--ink);
+    font:700 clamp(28px,4.2vw,64px)/1.2 "PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif; letter-spacing:.12em;
+    text-shadow:0 0 24px rgba(255,190,120,.45); pointer-events:none; }
+  #hint { position:fixed; bottom:2.5vh; right:2vw; color:rgba(245,239,226,.35);
+    font:400 14px "PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif; pointer-events:none; transition:opacity .6s; }
+  #mute { position:fixed; top:2.5vh; right:2vw; padding:6px 14px; border-radius:20px; cursor:pointer;
+    border:1px solid rgba(245,239,226,.25); background:rgba(4,31,33,.5); color:rgba(245,239,226,.6);
+    font:500 14px "PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif; }
+  #flash { position:fixed; inset:0; pointer-events:none; opacity:0; mix-blend-mode:screen;
+    background:radial-gradient(circle at 50% 50%, rgba(255,244,222,1), rgba(255,196,130,.55) 28%, rgba(255,160,90,0) 62%); }
+</style>
+</head>
+<body>
+<div id="title">抽一張牌</div>
+<div id="hint">空白鍵洗牌　點牌抽出　M 聲音　R 重來</div>
+<button id="mute">聲音：開</button>
+<div id="flash"></div>
+<script src="lib/gsap.min.js"></script>
+<script src="lib/CustomEase.min.js"></script>
+<script src="lib/CustomWiggle.min.js"></script>
+<script type="module">
+import * as THREE from './lib/three.module.min.js';
+
+gsap.registerPlugin(CustomEase, CustomWiggle);
+CustomWiggle.create('nudge', { wiggles:5, type:'easeOut' });
+
+// 電腦設成「減少動態效果」時：不抖、不震、光點減少，順序與停頓照舊
+let RM = false;
+gsap.matchMedia().add('(prefers-reduced-motion: reduce)', () => { RM = true; return () => { RM = false; }; });
+
+// 牌：給＿＿／要做到＿＿，小標跟 A4 第三行「給＿＿，要做到＿＿」一字一格對上（11/3 Kevin 選）。原寫給誰／要做到什麼（11/3 Kevin：要讓學生懂「它」指的是誰，所以牌上與 A4 都不用「它」）。2026-11-03 照五種袋子重寫（Kevin「重寫」），十二組所以十二張，抽過的收走。
+// 每一張都要五種袋子做得出來：輸出只有動（Servo、TT 馬達）和光（RGB），沒有聲音，所以「要做到什麼」只寫對人的效果，不寫要它發出聲音
+// 一行最多六個字；超過的用 \n 自己指定在哪裡斷，斷在意思的段落上，不要讓最後一行只剩一兩個字
+const CARDS = [
+  ['一隻怕黑的貓', '讓牠安心'],
+  ['在圖書館\n睡著的同學', '幫他保守\n一個秘密'],
+  ['八十歲的阿嬤', '提醒她一件事'],
+  ['一盆沒人\n澆水的植物', '讓這盆植物\n不孤單'],
+  ['總是遲到的\n室友', '讓他嚇一跳'],
+  ['剛來台北的\n外國人', '讓他笑出來'],
+  ['很怕考試的\n國中生', '幫他打氣'],
+  ['巷口的流浪狗', '讓牠知道\n有人在'],
+  ['正在失戀的\n朋友', '讓他今天\n好過一點'],
+  ['明天早上的\n你自己', '讓你準時\n出門'],
+  ['教室裡\n最安靜的人', '讓大家\n注意到他'],
+  ['一條金魚', '讓牠不無聊'],
+];
+
+const FONT = '"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif';
+const CW = 2.2, CH = 3.2, CD = 0.04, TW = 660, TH = 960, LH = 104;
+const CENTER = new THREE.Vector3(0, 0.2, 6.2);
+
+// ── 聲音：全部即時合成，第一次點擊才開 ──────────────────────────
+const AU = { ctx:null, out:null, muted:false, noise:null };
+function ac() {
+  if (!AU.ctx) {
+    AU.ctx = new AudioContext(); AU.out = AU.ctx.createGain(); AU.out.gain.value = .55; AU.out.connect(AU.ctx.destination);
+    const b = AU.ctx.createBuffer(1, AU.ctx.sampleRate, AU.ctx.sampleRate), d = b.getChannelData(0);
+    for (let i=0;i<d.length;i++) d[i] = Math.random()*2-1; AU.noise = b;
+  }
+  if (AU.ctx.state === 'suspended') AU.ctx.resume();
+  return AU.ctx;
+}
+function env(g, t, a, peak, dur) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t+a); g.gain.exponentialRampToValueAtTime(0.0001, t+dur); }
+function tone(type, f0, f1, dur, vol, at=0) {
+  const c = ac(), t = c.currentTime+at, o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t+dur);
+  env(g, t, .01, vol, dur); o.connect(g).connect(AU.out); o.start(t); o.stop(t+dur+.05);
+}
+function hiss(dur, f0, f1, vol, kind='bandpass', at=0, q=1.2) {
+  const c = ac(), t = c.currentTime+at, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+  s.buffer = AU.noise; s.loop = true; f.type = kind; f.Q.value = q;
+  f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t+dur);
+  env(g, t, Math.min(.05, dur/3), vol, dur); s.connect(f).connect(g).connect(AU.out); s.start(t); s.stop(t+dur+.05);
+}
+const sfx = {
+  tick:   () => tone('triangle', 1400, 900, .06, .12),
+  shuffle:() => { for (let i=0;i<14;i++) hiss(.07, 3000, 1800, .18, 'bandpass', i*.11+Math.random()*.04, 2); },
+  whoosh: () => hiss(.7, 300, 2600, .3),
+  charge: (d) => {
+    const c = ac(), t = c.currentTime, o = c.createOscillator(), lfo = c.createOscillator(), lg = c.createGain(), f = c.createBiquadFilter(), g = c.createGain();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(820, t+d);
+    lfo.frequency.setValueAtTime(6, t); lfo.frequency.linearRampToValueAtTime(24, t+d); lg.gain.value = 18; lfo.connect(lg).connect(o.frequency);
+    f.type = 'lowpass'; f.frequency.setValueAtTime(500, t); f.frequency.exponentialRampToValueAtTime(3200, t+d);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(.16, t+d); g.gain.exponentialRampToValueAtTime(0.0001, t+d+.06);
+    o.connect(f).connect(g).connect(AU.out); o.start(t); lfo.start(t); o.stop(t+d+.1); lfo.stop(t+d+.1);
+    hiss(d, 600, 5000, .08, 'bandpass', 0, .8);
+  },
+  boom:   () => { tone('sine', 130, 38, .9, .9); hiss(.5, 1600, 120, .45, 'lowpass', 0, .7); },
+  chime:  () => [880, 1320, 1760, 2640].forEach((f,i) => tone('triangle', f, f*1.002, 1.4, .16-i*.025, .08+i*.05)),
+  stamp:  () => { tone('sine', 190, 55, .22, .85); hiss(.06, 4000, 2500, .25, 'highpass'); },
+  tuck:   () => hiss(.35, 1800, 500, .14),
+};
+const muteBtn = document.getElementById('mute');
+function toggleMute() { AU.muted = !AU.muted; if (AU.out) AU.out.gain.value = AU.muted ? 0 : .55; muteBtn.textContent = AU.muted ? '聲音：關' : '聲音：開'; }
+muteBtn.addEventListener('pointerdown', e => { e.stopPropagation(); ac(); toggleMute(); });
+
+// ── 場景 ─────────────────────────────────────────────
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x041f21, 18, 40);
+const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.1, 100);
+const camBase = new THREE.Vector3(0, 0.4, 15), camShake = { a:0 };
+camera.position.copy(camBase);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const key = new THREE.DirectionalLight(0xfff1dd, 1.6); key.position.set(4, 6, 10); scene.add(key);
+const glow = new THREE.PointLight(0xff9a3c, 30, 30); glow.position.set(0, 0, 6); scene.add(glow);
+const glow2 = new THREE.PointLight(0x2fd6c8, 20, 30); glow2.position.set(-6, 3, 4); scene.add(glow2);
+
+function canvasTex(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+}
+
+// 背景星點
+{
+  const n = 600, pos = new Float32Array(n*3);
+  for (let i=0;i<n;i++){ pos[i*3]=(Math.random()-.5)*60; pos[i*3+1]=(Math.random()-.5)*36; pos[i*3+2]=-10-Math.random()*20; }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color:0xd9fff9, size:0.06, transparent:true, opacity:.7 })));
+}
+
+// 揭曉舞台：一片幕、兩層慢轉的柔光、牌背後的光暈（只從邊緣溢出）
+const curtain = new THREE.Mesh(new THREE.PlaneGeometry(60, 36), new THREE.MeshBasicMaterial({
+  map: canvasTex(1024, 640, (x,w,h) => { const g = x.createRadialGradient(w/2,h*.5,0,w/2,h*.5,w*.55);
+    g.addColorStop(0,'#0f6f71'); g.addColorStop(.45,'#0a4244'); g.addColorStop(1,'#041c1d'); x.fillStyle = g; x.fillRect(0,0,w,h); }),
+  transparent:true, opacity:0, depthWrite:false, fog:false }));
+curtain.position.z = 2; scene.add(curtain);
+
+const rayTex = canvasTex(512, 512, (x,w,h) => {
+  const g = x.createConicGradient(0, w/2, h/2), n = 14;
+  for (let k=0;k<n;k++){ g.addColorStop(k/n,'rgba(255,214,160,.5)'); g.addColorStop((k+.5)/n,'rgba(255,214,160,0)'); }
+  g.addColorStop(1,'rgba(255,214,160,.5)'); x.fillStyle = g; x.fillRect(0,0,w,h);
+  x.globalCompositeOperation = 'destination-in';
+  const r = x.createRadialGradient(w/2,h/2,w*.06,w/2,h/2,w/2); r.addColorStop(0,'rgba(0,0,0,1)'); r.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle = r; x.fillRect(0,0,w,h);
+});
+const rays = [[13, .15], [10, -.09]].map(([s, speed]) => {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(s, s), new THREE.MeshBasicMaterial({ map:rayTex, transparent:true, opacity:0,
+    blending:THREE.AdditiveBlending, depthWrite:false, fog:false }));
+  m.position.set(CENTER.x, CENTER.y, 4.3); m.userData.speed = speed; scene.add(m); return m;
+});
+const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: canvasTex(256, 256, (x,w,h) => { const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,w/2);
+    g.addColorStop(0,'rgba(255,190,110,1)'); g.addColorStop(.4,'rgba(255,150,80,.45)'); g.addColorStop(1,'rgba(255,120,60,0)'); x.fillStyle = g; x.fillRect(0,0,w,h); }),
+  transparent:true, opacity:0, blending:THREE.AdditiveBlending, depthWrite:false, fog:false }));
+// 放在牌翻面時碰不到的深度，光只從邊緣溢出，不會蓋到牌上
+halo.position.set(CENTER.x, CENTER.y, 4.6); halo.scale.set(4, 5.2, 1); scene.add(halo);
+
+// ── 牌 ──────────────────────────────────────────────
+function wrapLines(ctx, text, maxW) {
+  const lines = [];
+  for (const part of text.split('\n')) {
+    let cur = '';
+    for (const ch of part) { if (ctx.measureText(cur+ch).width > maxW && cur) { lines.push(cur); cur = ch; } else cur += ch; }
+    if (cur) lines.push(cur);
+  }
+  return lines;
+}
+// 量好兩段字的位置，放在紅帶子以上的正中間；「要做到什麼」另做一片，揭曉時才蓋上去
+function measure(who, what) {
+  const x = document.createElement('canvas').getContext('2d'); x.font = `800 84px ${FONT}`;
+  const whoL = wrapLines(x, who, 556), whatL = wrapLines(x, what, 556);
+  const blockH = 50 + whoL.length*LH + 70 + 50 + whatL.length*LH;
+  const y0 = 24 + (782 - blockH)/2 + 40, taskY = y0 + 104 + whoL.length*LH + 40;
+  return { whoL, whatL, y0, taskTop: taskY - 56, taskBottom: taskY + 104 + (whatL.length-1)*LH + 34, taskY };
+}
+function faceTexture(L) {
+  return canvasTex(TW, TH, x => {
+    x.fillStyle = '#f6efe1'; x.fillRect(0,0,TW,TH);
+    for (let i=0;i<2200;i++){ x.fillStyle=`rgba(120,90,60,${Math.random()*.06})`; x.fillRect(Math.random()*TW,Math.random()*TH,2,2); }
+    x.strokeStyle = '#22262a'; x.lineWidth = 6; x.strokeRect(24,24,612,912);
+    let y = L.y0;
+    x.fillStyle = '#9a7b5b'; x.font = `600 46px ${FONT}`; x.fillText('給', 60, y); y += 104;
+    x.fillStyle = '#22262a'; x.font = `800 84px ${FONT}`;
+    for (const l of L.whoL) { x.fillText(l, 60, y); y += LH; }
+    // 下緣紅帶子，字倒著印（向那本倒著翻的書致敬）
+    // 翻開時整張先倒著，這一行要先被全場讀到，所以帶子加高、字放大
+    x.fillStyle = '#c4462f'; x.fillRect(24, 806, 612, 130);
+    x.save(); x.translate(330, 871); x.rotate(Math.PI);
+    x.fillStyle = '#f6efe1'; x.font = `700 58px ${FONT}`; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText('抽到什麼，就做什麼', 0, 0); x.restore();
+  });
+}
+function taskPlane(L) {
+  const h = L.taskBottom - L.taskTop;
+  const tex = canvasTex(612, h, x => {
+    let y = L.taskY - L.taskTop;
+    x.fillStyle = '#9a7b5b'; x.font = `600 46px ${FONT}`; x.fillText('要做到', 36, y); y += 104;
+    x.fillStyle = '#c4462f'; x.font = `800 84px ${FONT}`;
+    for (const l of L.whatL) { x.fillText(l, 36, y); y += LH; }
+  });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(612/TW*CW, h/TH*CH),
+    new THREE.MeshBasicMaterial({ map:tex, toneMapped:false, transparent:true, opacity:0, depthWrite:false }));
+  m.position.set(0, CH/2 - (L.taskTop + h/2)/TH*CH, CD/2 + 0.003);
+  return m;
+}
+function backTexture() {
+  return canvasTex(TW, TH, x => {
+    const g = x.createLinearGradient(0,0,TW,TH); g.addColorStop(0,'#00a3a9'); g.addColorStop(1,'#006d71');
+    x.fillStyle = g; x.fillRect(0,0,TW,TH);
+    for (let r=0;r<16;r++) for (let k=0;k<11;k++){
+      x.fillStyle = (r+k)%3===0 ? 'rgba(255,205,110,.75)' : 'rgba(0,30,32,.35)';
+      x.beginPath(); x.arc(40+k*58, 40+r*60, (r+k)%3===0?9:5, 0, Math.PI*2); x.fill();
+    }
+    x.strokeStyle = 'rgba(255,255,255,.85)'; x.lineWidth = 6; x.strokeRect(24,24,612,912);
+    x.fillStyle = '#ffffff'; x.font = `800 260px ${FONT}`; x.textAlign='center'; x.textBaseline='middle';
+    x.fillText('?', 330, 470);
+  });
+}
+
+const cards = CARDS.map(([who, what], i) => {
+  const L = measure(who, what);
+  const edge  = new THREE.MeshStandardMaterial({ color:0xe8dcc4, roughness:.6, emissive:0xff9a3c, emissiveIntensity:0 });
+  const ft = faceTexture(L);
+  // 牌面照原色畫、不吃燈光與色調壓縮，投影到後排紙色才不會變灰
+  const front = new THREE.MeshBasicMaterial({ map:ft, toneMapped:false });
+  const back  = new THREE.MeshStandardMaterial({ map: backTexture(), roughness:.45, metalness:.15 });
+  const m = new THREE.Mesh(new THREE.BoxGeometry(CW, CH, CD), [edge, edge, edge, edge, front, back]);
+  const task = taskPlane(L); m.add(task);
+  m.userData = { i, who, state:'deck', phase: Math.random()*Math.PI*2, edge, back, task };
+  scene.add(m); return m;
+});
+
+function gridSpot(k, n) {
+  const cols = Math.ceil(n/2), row = k < cols ? 0 : 1, col = row ? k-cols : k;
+  const inRow = row ? n-cols : cols;
+  return new THREE.Vector3((col-(inRow-1)/2)*2.75, row ? -2.1 : 1.75, 0);
+}
+let order = cards.map((_,k)=>k);
+const deck = () => cards.filter(c => c.userData.state==='deck');
+function layoutDeck(instant) {
+  const live = order.map(k=>cards[k]).filter(c=>c.userData.state==='deck');
+  live.forEach((c,k) => {
+    const p = gridSpot(k, live.length); c.userData.home = p;
+    if (instant) { c.position.copy(p); c.rotation.set(0, Math.PI, 0); }
+    else gsap.to(c.position, { x:p.x, y:p.y, z:p.z, duration:.7, ease:'power3.out' });
+  });
+}
+layoutDeck(true);
+
+// ── 光點：爆開、往中心吸 ───────────────────────────────────
+function points(n, color, size) {
+  const pos = new Float32Array(n*3), g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  const mat = new THREE.PointsMaterial({ color, size, transparent:true, opacity:0, blending:THREE.AdditiveBlending, depthWrite:false, fog:false });
+  const p = new THREE.Points(g, mat); scene.add(p); return { pos, g, mat };
+}
+const BURST = points(320, 0xffc27a, 0.13), SUCK = points(240, 0xffe2b0, 0.09);
+function burstParticles(n) {
+  const vel = Array.from({length:BURST.pos.length/3}, (_,i) => i < n ? new THREE.Vector3().randomDirection().multiplyScalar(2+Math.random()*6) : null);
+  const s = { t:0 };
+  gsap.fromTo(BURST.mat, { opacity:1 }, { opacity:0, duration:1.8, ease:'power2.in' });
+  gsap.to(s, { t:1, duration:1.8, ease:'power3.out', onUpdate:() => {
+    vel.forEach((v,i) => { if (!v) { BURST.pos[i*3+2] = -99; return; }
+      BURST.pos[i*3]=CENTER.x+v.x*s.t; BURST.pos[i*3+1]=CENTER.y+v.y*s.t-1.2*s.t*s.t; BURST.pos[i*3+2]=CENTER.z+v.z*s.t*.4; });
+    BURST.g.attributes.position.needsUpdate = true;
+  }});
+}
+function suckParticles(d) {
+  const n = RM ? 60 : SUCK.pos.length/3;
+  const from = Array.from({length:SUCK.pos.length/3}, (_,i) => i < n ? new THREE.Vector3().randomDirection().multiply(new THREE.Vector3(7,5,1.5)) : null);
+  const lag = from.map(() => Math.random()*.45), s = { t:0 };
+  gsap.fromTo(SUCK.mat, { opacity:0 }, { opacity:.95, duration:d*.4 });
+  gsap.to(SUCK.mat, { opacity:0, duration:.15, delay:d });
+  gsap.to(s, { t:1, duration:d, ease:'none', onUpdate:() => {
+    from.forEach((v,i) => { if (!v) { SUCK.pos[i*3+2] = -99; return; }
+      const p = gsap.utils.clamp(0, 1, (s.t - lag[i]) / (1 - lag[i])), e = p*p*p, k = 1 - e;
+      SUCK.pos[i*3]=CENTER.x+v.x*k; SUCK.pos[i*3+1]=CENTER.y+v.y*k; SUCK.pos[i*3+2]=CENTER.z-.2+v.z*k; });
+    SUCK.g.attributes.position.needsUpdate = true;
+  }});
+}
+
+// 三層衝擊波：寬而淡、中等、細而亮
+const RINGS = [[.78,.18],[.9,.4],[.97,.85]].map(([inner, op]) => {
+  const m = new THREE.Mesh(new THREE.RingGeometry(inner, 1, 128), new THREE.MeshBasicMaterial({ color:0xffd29a, transparent:true, opacity:0,
+    blending:THREE.AdditiveBlending, depthWrite:false, fog:false, side:THREE.DoubleSide }));
+  m.position.set(CENTER.x, CENTER.y, 4.7); m.userData.op = op; scene.add(m); return m;
+});
+const flash = document.getElementById('flash');
+
+// ── 狀態 ─────────────────────────────────────────────
+// idle 等人抽；busy 動畫中，點擊不理；band 翻開了但整張倒著，大家先讀紅帶子；who 轉正了、只給了「給誰」；done 兩段都給了，等收牌
+let state = 'idle', current = null, drawnCount = 0, charging = null, taskCall = null, bandCall = null;
+const hint = document.getElementById('hint');
+
+// 等待時每 4 秒有一張輕輕抖一下發光，把眼睛帶到「可以點」
+function hintPulse() {
+  if (state === 'idle' && !RM) {
+    const live = deck(), c = live[Math.floor(Math.random()*live.length)];
+    if (c) {
+      gsap.fromTo(c.rotation, { z:0 }, { z:.07, duration:.8, ease:'nudge' });
+      gsap.fromTo(c.userData.edge, { emissiveIntensity:0 }, { emissiveIntensity:2.2, duration:.4, yoyo:true, repeat:1, ease:'sine.inOut' });
+    }
+  }
+  gsap.delayedCall(4, hintPulse);
+}
+gsap.delayedCall(2.5, hintPulse);
+
+function shuffle() {
+  if (state !== 'idle') return; state = 'busy'; hint.style.opacity = 0; sfx.shuffle();
+  const live = deck();
+  for (let i=order.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [order[i],order[j]]=[order[j],order[i]]; }
+  const tl = gsap.timeline({ onComplete:() => { state = 'idle'; } });
+  live.forEach((c,k) => {
+    const a = k/live.length*Math.PI*2;
+    tl.to(c.position, { x:Math.cos(a)*1.2, y:Math.sin(a)*1.2, z:-1+k*.05, duration:.5, ease:'power2.in' }, 0);
+    tl.to(c.rotation, { z:'+='+(Math.PI*2), duration:1.6, ease:'power2.inOut' }, 0);
+  });
+  tl.addLabel('swirl', .65);
+  tl.add(() => {
+    const sw = { a:0 };
+    gsap.to(sw, { a:Math.PI*4, duration:1.4, ease:'power2.inOut', onUpdate:() => {
+      live.forEach((c,k)=>{ const a=k/live.length*Math.PI*2+sw.a; const r=1.2+Math.sin(sw.a/2)*4.2;
+        c.position.x=Math.cos(a)*r; c.position.y=Math.sin(a)*r*.55; c.position.z=Math.sin(a)*1.5; });
+    }, onComplete:() => layoutDeck(false) });
+  }, 'swirl');
+  tl.add(() => live.forEach(c => gsap.to(c.rotation, { x:0, y:Math.PI, z:0, duration:.5 })), 'swirl+=1.7');
+  tl.to({}, { duration:.6 }, 'swirl+=1.7');
+}
+
+function draw(c) {
+  state = 'busy'; current = c; c.userData.state = 'out'; hint.style.opacity = 0; sfx.tick();
+  (window.__drawn = window.__drawn || []).push(CARDS[c.userData.i]);   // 疊在大地圖上時，收起來要列在第三站；一抽就記，沒收牌就按 Esc 也算（11/3）
+  gsap.killTweensOf([c.position, c.rotation, c.scale]);
+  const others = deck(), U = c.userData;
+  const tl = gsap.timeline({ defaults:{ ease:'power3.inOut' } });
+
+  tl.addLabel('select', 0)
+    .to(c.position, { z:'-=0.25', y:'-=0.12', duration:.15, ease:'power2.in' }, 'select')
+    .to(c.position, { z:'+=1.3', y:'+=0.4', duration:.3, ease:'back.out(2)' }, 'select+=0.15')
+    .to(U.edge, { emissiveIntensity:1.5, duration:.3 }, 'select')
+    .to(others.map(o => o.position), { z:-2.5, duration:.6, ease:'power2.out', stagger:{ each:.02, from:'random' } }, 'select')
+    .to(others.map(o => o.userData.back.color), { r:.35, g:.33, b:.42, duration:.5 }, 'select')
+
+    .addLabel('fly', 'select+=0.45')
+    .add(() => sfx.whoosh(), 'fly')
+    .to(c.position, { x:CENTER.x, y:CENTER.y, z:CENTER.z, duration:.8 }, 'fly')
+    .to(c.rotation, { x:0, y:Math.PI, z:Math.PI, duration:.8 }, 'fly')
+    .to(c.scale, { x:1.25, y:1.25, z:1.25, duration:.8 }, 'fly')
+    .to(curtain.material, { opacity:.93, duration:1.2, ease:'power2.out' }, 'fly+=0.3')
+    .to('#title', { opacity:.25, duration:.6 }, 'fly')
+    .add(() => others.forEach(o => o.visible = false), 'fly+=1.2')
+
+    .addLabel('charge', 'fly+=0.8')
+    .add(() => { sfx.charge(1.3); suckParticles(1.3); charging = { c, a:0 };
+      gsap.to(charging, { a: RM ? 0 : 1, duration:1.3, ease:'power2.in' }); }, 'charge')
+    .to(halo.material, { opacity:1, duration:1.3, ease:'power1.in' }, 'charge-=0.3')
+    .to(halo.scale, { x:7.4, y:9.2, duration:1.6, ease:'power1.in' }, 'charge-=0.3')
+    .to(U.edge, { emissiveIntensity:4, duration:1.3, ease:'power2.in' }, 'charge')
+    .to(c.scale, { x:1.42, y:1.12, duration:.14, ease:'power2.in' }, 'charge+=1.16')
+
+    .addLabel('burst', 'charge+=1.3')
+    .add(() => { charging = null; c.position.x = CENTER.x; c.position.y = CENTER.y; burstFX(); }, 'burst')
+    // 翻面但先不轉正：整張倒著，下緣倒印的紅帶子在大家眼裡是正的
+    .to(c.rotation, { x:0, y:0, z:Math.PI, duration:.9, ease:'back.out(1.4)' }, 'burst')
+    .to(c.scale, { x:1.25, y:1.25, z:1.25, duration:.7, ease:'elastic.out(1, 0.5)' }, 'burst')
+    .to(U.edge, { emissiveIntensity:.5, duration:.8, ease:'power2.out' }, 'burst')
+    .to(halo.material, { opacity:.55, duration:.8 }, 'burst')
+    .to(halo.scale, { x:5, y:6.4, duration:.8 }, 'burst')
+    .to(rays.map(r => r.material), { opacity:.6, duration:.6, ease:'power2.out' }, 'burst')
+
+    .addLabel('reveal', 'burst+=0.9')
+    .add(() => {
+      // 紅帶子九個字，照字卡速度約 3.5 秒；這一句每次都一樣，第二次以後大家認得，所以壓到 3 秒
+      state = 'band'; bandCall = gsap.delayedCall(3, turnUpright);
+    }, 'reveal');
+}
+
+function burstFX() {
+  sfx.boom(); sfx.chime();
+  gsap.timeline()
+    .to(flash, { opacity:.8, duration:.07, ease:'power2.out' })
+    .to(flash, { opacity:0, duration:.55, ease:'power2.in' });
+  RINGS.forEach((r, k) => {
+    gsap.fromTo(r.scale, { x:.6, y:.6 }, { x:4.8+k*.5, y:4.8+k*.5, duration:.9 + k*.12, ease:'power2.out', delay:k*.05 });
+    gsap.fromTo(r.material, { opacity:r.userData.op }, { opacity:0, duration:.9 + k*.12, ease:'power2.out', delay:k*.05 });
+  });
+  burstParticles(RM ? 80 : 320);
+  gsap.timeline()
+    .to(camBase, { z:13.9, duration:.18, ease:'power3.out' })
+    .to(camBase, { z:14.4, duration:1.1, ease:'power2.inOut' });
+  if (!RM) gsap.fromTo(camShake, { a:.22 }, { a:0, duration:.4, ease:'power2.out' });
+}
+
+// Kevin 2026-10-31：先讓大家讀到轉正的「抽到什麼，就做什麼」，停一下，整張再轉 180 度換上面的字轉正
+function turnUpright() {
+  if (state !== 'band') return;
+  state = 'busy'; if (bandCall) { bandCall.kill(); bandCall = null; }
+  const c = current, U = c.userData;
+  sfx.whoosh(); sfx.tick();
+  gsap.timeline({ onComplete:() => {
+      state = 'who';
+      const n = U.who.replace('\n','').length;
+      taskCall = gsap.delayedCall(gsap.utils.clamp(2.5, 4, n/4.5 + 1.5), showTask);
+    } })
+    .to(c.scale, { x:1.15, y:1.15, z:1.15, duration:.2, ease:'power2.in' }, 0)
+    .to(c.rotation, { z:0, duration: RM ? .5 : 1, ease: RM ? 'power2.inOut' : 'back.out(1.3)' }, .1)
+    .to(c.scale, { x:1.25, y:1.25, z:1.25, duration:.6, ease:'back.out(2)' }, .5);
+}
+
+function showTask() {
+  if (state !== 'who') return;
+  state = 'busy'; if (taskCall) { taskCall.kill(); taskCall = null; }
+  const t = current.userData.task;
+  sfx.stamp();
+  gsap.timeline({ onComplete:() => { state = 'done'; } })
+    .fromTo(t.scale, { x:1.6, y:1.6 }, { x:1, y:1, duration:.4, ease:'back.out(3)' }, 0)
+    .fromTo(t.material, { opacity:0 }, { opacity:1, duration:.18, ease:'power1.out' }, 0)
+    .to(camBase, { z:14.25, duration:.08, ease:'power2.out' }, .3)
+    .to(camBase, { z:14.4, duration:.4, ease:'power2.out' }, .38)
+    .add(() => { if (!RM) gsap.fromTo(camShake, { a:.08 }, { a:0, duration:.25 }); }, .3);
+}
+
+function stash(c) {
+  state = 'busy'; drawnCount++; sfx.tuck();
+  deck().forEach(o => o.visible = true);
+  // 已抽區排在畫面最下緣，依當下視窗算可見寬高，投影幕比例不同也不會被切掉
+  const slot = drawnCount-1, dist = 15 - 1;
+  const halfH = Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*dist, halfW = halfH*camera.aspect;
+  const step = Math.min(1.1, (halfW*2 - 1.2)/CARDS.length);
+  const tx = -halfW + 0.75 + slot*step, ty = -halfH + 1.45;
+  c.userData.state = 'drawn';
+  gsap.timeline({ onComplete:() => { state = 'idle'; current = null; layoutDeck(false);
+      deck().forEach(o => gsap.to(o.position, { z:0, duration:.6 })); } })
+    .to(c.position, { x:tx, y:ty, z:1, duration:.8, ease:'power3.inOut' }, 0)
+    .to(c.scale, { x:.4, y:.4, z:.4, duration:.8, ease:'power3.inOut' }, 0)
+    .to(c.rotation, { x:-.15, duration:.8 }, 0)
+    .to(c.userData.edge, { emissiveIntensity:0, duration:.6 }, 0)
+    .to(camBase, { z:15, duration:.8, ease:'power2.inOut' }, 0)
+    .to([curtain.material, halo.material, ...rays.map(r => r.material)], { opacity:0, duration:.7 }, 0)
+    .to(halo.scale, { x:4, y:5.2, duration:.7 }, 0)
+    .to('#title', { opacity:1, duration:.6 }, .2)
+    .to(deck().map(o => o.userData.back.color), { r:1, g:1, b:1, duration:.6 }, .2);
+}
+
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+function tap(e) {
+  ac();
+  if (state === 'busy') return;
+  if (state === 'band') { turnUpright(); return; }
+  if (state === 'who') { showTask(); return; }
+  if (state === 'done') { stash(current); return; }
+  if (!e) return;
+  mouse.set(e.clientX/innerWidth*2-1, -(e.clientY/innerHeight)*2+1);
+  ray.setFromCamera(mouse, camera);
+  const hit = ray.intersectObjects(deck(), false)[0];
+  if (hit) draw(hit.object);
+}
+addEventListener('pointerdown', tap);
+addEventListener('keydown', e => {
+  ac();
+  if (e.code === 'Space') { e.preventDefault(); shuffle(); }
+  if (e.key === 'm' || e.key === 'M') toggleMute();
+  if (e.key === 'r' || e.key === 'R') location.reload();
+});
+addEventListener('resize', () => { camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = clock.getDelta(), t = clock.elapsedTime;
+  if (state === 'idle') deck().forEach(c => { if (c.userData.home) {
+    c.position.y = c.userData.home.y + Math.sin(t*1.2 + c.userData.phase)*0.07;
+    c.rotation.x = Math.sin(t*.9 + c.userData.phase)*0.05; } });
+  // 蓄力：越抖越兇
+  if (charging) { const a = charging.a, c = charging.c;
+    c.rotation.z = Math.PI + Math.sin(t*48)*.09*a + (Math.random()-.5)*.05*a;
+    c.position.x = CENTER.x + (Math.random()-.5)*.14*a; c.position.y = CENTER.y + (Math.random()-.5)*.1*a; }
+  if (current && state === 'done') current.rotation.y = Math.sin(t*.8)*0.05;
+  rays.forEach(r => r.rotation.z += dt*r.userData.speed);
+  glow2.position.x = Math.sin(t*.3)*7; glow2.position.y = Math.cos(t*.4)*3;
+  camera.position.set(camBase.x + (Math.random()-.5)*camShake.a, camBase.y + (Math.random()-.5)*camShake.a, camBase.z);
+  renderer.render(scene, camera);
+});
+window.__cards = cards; window.__draw = draw; window.__shuffle = shuffle; window.__tap = () => tap(null); window.__state = () => state;
+</script>
+</body>
+</html>
