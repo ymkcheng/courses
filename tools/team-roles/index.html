@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>團隊角色積木 · Belbin 團隊角色自評</title>
+<title>團隊角色積木 · 大同大學 大師講座 115-1</title>
 <meta name="description" content="用十顆積木找出你在團隊裡的角色。Belbin 團隊角色自評，七個部分，八種角色。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,6 +47,7 @@ h2{font-weight:900;font-size:22px;margin:0 0 8px}
 p{line-height:1.75;margin:8px 0}
 .small{font-size:14px;opacity:.75}
 
+.course{display:inline-block;font-weight:900;font-size:14px;background:var(--dark);color:#fff;padding:5px 10px 6px;border-radius:5px;margin-bottom:14px}
 .logo{display:flex;gap:6px;margin-bottom:6px}
 .logo span{
   display:inline-grid;place-items:center;width:44px;height:44px;font-weight:900;font-size:24px;color:#fff;border-radius:6px;
@@ -214,6 +215,7 @@ footer a{color:#fff}
   <section id="intro">
     <div class="brick panel">
       <div class="studs"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="course">大同大學 · 大師講座 115-1 · 小組活動</div>
       <div class="logo"><span>團</span><span>隊</span><span>角</span><span>色</span></div>
       <h1>用十顆積木<br>找出你在團隊裡的位置</h1>
       <p>接下來有七個部分，每個部分有八句話。每一部分你手上都有 <b>10 顆積木</b>，把積木分給最能描述你行為的句子。可以平均分給很多句，也可以 10 顆全部放在同一句。</p>
@@ -275,6 +277,7 @@ footer a{color:#fff}
       <p>分數最高的一到兩個是你的<b>主要角色</b>，是你在團隊裡最自然會站上的位置。接下來兩三個是<b>次要角色</b>，團隊缺人時你也能補上。分數最低的是你較不習慣扮演的角色，可以把這些位置交給隊友。</p>
       <p>每個角色都有它的長處，也都有一個「可以被接受的弱點」，那是長處的另一面。一個好團隊不是每個人都一樣，而是八種角色都有人站得住。</p>
       <p class="small">這是一份自評，反映的是你怎麼看自己。如果找幾位一起工作過的夥伴也用這份清單描述你，常常會看到有趣的落差。</p>
+      <p><b>回到小組：</b>把每個人的主要角色排在一起看，你們這組哪幾種角色有人站，哪幾種是空的？空著的位置，這學期的專案裡誰來補？</p>
     </div>
 
     <div class="brick panel">
@@ -292,6 +295,7 @@ footer a{color:#fff}
   </section>
 
   <footer>
+    大同大學 大師講座 115-1 課堂使用<br>
     題目與計分來源 M. Belbin 團隊角色自評量表（Team Role Self-Perception Inventory）中文版<br>
     你的答案只存在你自己的瀏覽器裡，不會上傳到任何地方
   </footer>
@@ -526,7 +530,7 @@ function renderResult(){
   var sc=scores(state.pts), max=Math.max.apply(null,sc.concat([1]));
   var who = state.name ? state.name+" 的" : "你的";
   $("resTitle").textContent = who+"團隊角色積木塔";
-  document.title = (state.name? state.name+" 的":"")+"團隊角色積木 · Belbin";
+  document.title = (state.name? state.name+" 的":"")+"團隊角色積木 · 大師講座";
 
   // towers
   var unit = Math.max(4, Math.min(14, Math.floor(260/max)));
