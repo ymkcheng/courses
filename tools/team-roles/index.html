@@ -582,7 +582,7 @@ function renderResult(){
   $("keyTable").innerHTML=kt;
 
   $("sharedBanner").classList.toggle("hidden", !shared);
-  if(shared) $("sharedText").textContent = (state.name? state.name : "朋友")+" 分享了他的團隊角色積木塔給你。";
+  if(shared) $("sharedText").textContent = (state.name? state.name : "朋友")+" 分享了自己的團隊角色積木塔給你。";
   $("editBtn").classList.toggle("hidden", shared);
   $("shareBtn").classList.toggle("hidden", shared);
   $("restartBtn").classList.toggle("hidden", shared);
