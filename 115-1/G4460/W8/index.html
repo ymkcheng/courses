@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>大地圖簡報</title>
+<!-- 大地圖簡報的引擎。不要手改這份，內容寫在 JSON，用 scripts/建地圖.py 組出 index.html。 -->
+<style>
+  :root {
+    --ground: #f4efe6; --ink: #1f2a2e; --muted: #6b7377; --paper: #ffffff;
+    --line: #d9d2c5; --accent: #c8412f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--ground);
+    font-family: "PingFang TC", "Noto Sans TC", system-ui, sans-serif; color: var(--ink); }
+  #viewport { position: fixed; inset: 0; overflow: hidden; }
+  #world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  svg#paths { position: absolute; inset: 0; pointer-events: none; }
+  .zone { position: absolute; width: 940px; border-radius: 28px; padding: 48px 56px; background: var(--paper);
+    box-shadow: 0 20px 60px rgba(0,0,0,.08); cursor: pointer; border-top: 18px solid var(--c, var(--line));
+    outline: 6px solid transparent; outline-offset: 10px; transition: outline-color .4s; }
+  .zone.on { outline-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+  .zone h2 { font-size: 64px; line-height: 1.2; margin-bottom: 24px; }
+  .zone p { font-size: 34px; line-height: 1.6; }
+  .zone p + p { margin-top: 14px; }
+  .zone .tag { display: inline-block; font-size: 24px; letter-spacing: .08em; color: var(--muted); margin-bottom: 14px; }
+  .zone.center { width: 1200px; text-align: center; background: var(--ink); color: var(--ground); border-top: 0; }
+  .zone.center h2 { font-size: 110px; }
+  .zone.center p { font-size: 40px; opacity: .8; }
+  .chip { display: inline-block; font-size: 30px; padding: 8px 22px; border-radius: 999px; margin: 8px 10px 0 0; color: #fff; background: var(--muted); }
+  .docline { height: 26px; border-radius: 13px; background: var(--line); margin: 22px 0; }
+  .docline.gap { background: transparent; border: 5px dashed var(--accent); }
+
+  #hud { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); display: flex; gap: 10px; align-items: center;
+    background: rgba(31,42,46,.92); color: var(--ground); padding: 10px 14px; border-radius: 14px; font-size: 15px; z-index: 10;
+    max-width: calc(100vw - 32px); flex-wrap: wrap; justify-content: center; }
+  #hud button { font: inherit; border: 0; border-radius: 9px; padding: 8px 14px; cursor: pointer; background: #3a4a50; color: var(--ground); }
+  #hud button.live { background: var(--accent); }
+  #hud .where { min-width: 7em; text-align: center; opacity: .85; }
+  #caption { position: fixed; left: 50%; top: 18px; transform: translateX(-50%); max-width: min(900px, calc(100vw - 32px));
+    background: rgba(255,255,255,.94); color: var(--ink); padding: 10px 18px; border-radius: 12px; font-size: 18px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.08); display: none; z-index: 10; }
+  #caption .hit { color: var(--accent); font-weight: 700; }
+  #help { position: fixed; right: 16px; top: 16px; font-size: 13px; color: var(--muted); text-align: right; line-height: 1.6; z-index: 9; }
+  body.clean #help, body.clean #caption { display: none !important; }
+</style>
+</head>
+<body>
+<div id="viewport"><div id="world"><svg id="paths"></svg></div></div>
+<div id="caption"></div>
+<div id="help">← → 或空白鍵：下一站<br>0：看全圖　點區塊：飛過去<br>「開始聽」：講到哪就跳到哪　H：藏提示</div>
+<div id="hud">
+  <button id="prev">← 上一站</button>
+  <span class="where" id="where">全圖</span>
+  <button id="next">下一站 →</button>
+  <button id="all">看全圖</button>
+  <button id="mic">🎤 開始聽</button>
+</div>
+
+<script id="deck" type="application/json">{"title": "用你的魔法，啟動投石機", "subtitle": "三個人，用想像力造出一台投石機", "colors": {"s1": "#1f8fd4", "s2": "#e8488a", "s3": "#5f9a25", "s4": "#f39200", "s5": "#13a89e", "s6": "#7a5cc9", "s7": "#d6336c", "s8": "#c99200", "s9": "#155173", "s10": "#e0a800", "s11": "#e8488a"}, "titleKeywords": ["回到開頭", "看全圖", "大地圖"], "stations": [{"id": "survey", "name": "填問卷", "color": "s1", "title": "先填一份問卷", "html": "<div class=\"mrow\"><span class=\"mk\">做什麼<\/span><p>掃右下角的碼，打開問卷<\/p><\/div><div class=\"mrow\"><span class=\"mk\">第一題<\/span><p>選「G4460數位自造者/鄭穎懋」，<br>再按繼續<\/p><\/div><figure class=\"qr\"><img src=\"問卷-QR.png\" alt=\"問卷的碼\"><figcaption>問卷<\/figcaption><\/figure><style>\n/* G4460 W8 投石機大地圖的風格（2026-11-10，Kevin「投石機使用大地圖 strawbees 風格」）。\n   照 strawbees.com 首頁（2026-11-10 用 Chrome 開過）：淡天藍底、深藍字、粗黑體標題、黃色按鈕；\n   產品本身是彩色吸管用小接頭接成三角形。所以站與站之間是一根一根彩色吸管，接頭是圓點加中間一個孔。\n   範本不改；這份 style 掛在第一站的 htmlFile，排位置之前就生效。品牌名不上幕，只借樣子。 */\n@import url(\"https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap\");\n:root { --ground: #eaf5fc; --ink: #123a5e; --muted: #4d6e8c; --paper: #ffffff; --line: #cfe3f2;\n  --yellow: #ffbe03; --sky: #1f8fd4; --green: #8fbf3f; --pink: #e8488a; --orange: #f39200; }\nhtml, body { background-color: var(--ground); font-family: \"Noto Sans TC\", \"PingFang TC\", sans-serif; color: var(--ink);\n  background-image: radial-gradient(circle, #cfe6f5 4px, transparent 4.5px); background-size: 56px 56px; }\n.zone { border-radius: 28px; border: 0; box-shadow: 0 6px 0 #c3dcee, 0 26px 50px rgba(18,58,94,.14); }\n.zone:not(.center) { border-top: 22px solid var(--c); }\n.zone:not(.center) > .tag { display: block; width: fit-content; font-weight: 900; color: var(--c); letter-spacing: .1em; }\n.zone:not(.center) > h2 { color: var(--ink); font-weight: 900; }\n.zone:not(.center) > h2::after { content: \"\"; display: block; height: 10px; width: 120px; margin: 14px 0 22px; border-radius: 5px; background: var(--yellow); }\n.mrow { display: flex; gap: 22px; align-items: baseline; margin-top: 18px; }\n.mrow .mk { flex: none; min-width: 5.2em; text-align: center; font-size: 26px; font-weight: 900; color: var(--ink);\n  background: var(--yellow); border-radius: 999px; padding: 6px 16px; letter-spacing: .06em; }\n.mrow p { font-size: 34px; line-height: 1.55; }\n.zone .qr { position: absolute; right: 40px; bottom: 34px; margin: 0; text-align: center; }\n.zone .qr img { width: 200px; height: 200px; display: block; border-radius: 14px; background: #fff; padding: 6px; box-shadow: 0 0 0 4px var(--c); }\n.zone .qr figcaption { font-size: 26px; font-weight: 900; margin-top: 8px; color: var(--ink); }\n.zone:has(.qr) .mrow { padding-right: 240px; }\n.zone p.big1 { font-size: 52px; font-weight: 900; line-height: 1.45; margin-top: 10px; }\n.big1 em { font-style: normal; background: linear-gradient(transparent 60%, color-mix(in srgb, var(--yellow) 70%, transparent) 60%); }\n/* 中間那一塊：深藍底，黃字，旁邊是吸管接成的三角形 */\n.zone.center { background: var(--ink); color: #fff; padding: 110px 90px 120px; box-shadow: 0 8px 0 #0b2945, 0 30px 70px rgba(18,58,94,.35); }\n.zone.center h2 { color: var(--yellow); font-weight: 900; letter-spacing: .02em; }\n.zone.center p { color: #dcecf8; opacity: 1; }\n.zone.center .truss { position: absolute; pointer-events: none; }\n/* 目標那一站的示意：三個紙杯疊成塔，一條量距離的線 */\n.target { display: flex; align-items: flex-end; gap: 40px; margin-top: 24px; }\n.cups { flex: none; }\n.dist { flex: 1; text-align: center; font-size: 30px; font-weight: 700; color: var(--muted); }\n.dist .bar { height: 12px; border-radius: 6px; background: repeating-linear-gradient(90deg, var(--sky) 0 30px, transparent 30px 44px); margin-bottom: 10px; }\n.sling { width: 120px; height: 110px; flex: none; }\n.goto { display: inline-block; font-size: 34px; font-weight: 900; color: var(--ink); background: var(--yellow); padding: 14px 30px; border-radius: 999px; text-decoration: none; box-shadow: 0 5px 0 #c99200; }\n.mg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; margin-top: 10px; }\n.mg { background: #f5faff; border: 3px solid var(--line); border-radius: 22px; padding: 22px 26px; }\n.mg-k { display: inline-block; font-size: 26px; font-weight: 900; color: var(--ink); background: var(--yellow); border-radius: 999px; padding: 6px 18px; margin-bottom: 12px; }\n.zone .mg p { font-size: 34px; line-height: 1.5; }\n.mg-past p { color: var(--muted); }\n.zone .mg p.mg-bubble { background: #fff; border: 4px solid var(--c); border-radius: 26px; padding: 16px 22px; position: relative; }\n.mg-bubble b { color: #7a5cc9; font-size: 40px; }\n.mg-code pre { font: 600 22px/1.5 \"SF Mono\", Menlo, monospace; color: #e6f2fb; background: var(--ink); border-radius: 14px; padding: 16px 20px; min-height: 345px; margin: 0; white-space: pre; }\n.mg-live { display: flex; flex-direction: column; align-items: flex-start; }\n.zone .mg p.mg-say { font-size: 32px; font-weight: 900; color: var(--ink); margin-top: 8px; }\n<\/style>\n", "keywords": ["問卷", "填問卷", "業師"], "width": 1200}, {"id": "hook", "name": "從一根吸管開始", "color": "s10", "title": "從一根吸管開始", "html": "<div class=\"mrow\"><span class=\"mk\">看到最後<\/span><p>一分鐘，先別急著猜它會變成什麼<\/p><\/div><div class=\"vids\"><a class=\"goto\" data-yt=\"oRFqQcsVXF0\" href=\"https://www.youtube.com/watch?v=oRFqQcsVXF0\">▶ 播放<\/a><\/div>", "keywords": ["一根吸管", "看到最後"], "width": 1150}, {"id": "goal", "name": "同一個目標", "color": "s2", "title": "每一組做同一件事", "html": "<div class=\"mrow\"><span class=\"mk\">做什麼<\/span><p>做一台投石機，打倒那座紙杯塔<\/p><\/div><div class=\"mrow\"><span class=\"mk\">規則<\/span><p>不用手碰開關，就讓它發射<\/p><\/div><div class=\"mrow\"><span class=\"mk\">上來拿<\/span><p>每組派一個人來拿材料，<br>拿到超音波或麥克風，就做那一種<\/p><\/div><div class=\"target\"><svg class=\"cups\" viewBox=\"0 0 210 196\" width=\"210\" height=\"196\"><polygon points=\"53,4 149,4 133,94 69,94\" fill=\"#fff\" stroke=\"#123a5e\" stroke-width=\"5\" stroke-linejoin=\"round\"/><line x1=\"57\" y1=\"14\" x2=\"145\" y2=\"14\" stroke=\"#e8488a\" stroke-width=\"5\"/><polygon points=\"2,102 98,102 82,192 18,192\" fill=\"#fff\" stroke=\"#123a5e\" stroke-width=\"5\" stroke-linejoin=\"round\"/><line x1=\"6\" y1=\"112\" x2=\"94\" y2=\"112\" stroke=\"#e8488a\" stroke-width=\"5\"/><polygon points=\"110,102 206,102 190,192 126,192\" fill=\"#fff\" stroke=\"#123a5e\" stroke-width=\"5\" stroke-linejoin=\"round\"/><line x1=\"114\" y1=\"112\" x2=\"202\" y2=\"112\" stroke=\"#e8488a\" stroke-width=\"5\"/><\/svg><div class=\"dist\"><div class=\"bar\"><\/div>距離，現場量給你看<\/div><svg class=\"sling\" viewBox=\"0 0 120 110\"><line x1=\"10\" y1=\"100\" x2=\"110\" y2=\"100\" stroke=\"#f39200\" stroke-width=\"12\" stroke-linecap=\"round\"/><line x1=\"60\" y1=\"100\" x2=\"30\" y2=\"20\" stroke=\"#1f8fd4\" stroke-width=\"12\" stroke-linecap=\"round\"/><line x1=\"60\" y1=\"100\" x2=\"100\" y2=\"60\" stroke=\"#8fbf3f\" stroke-width=\"12\" stroke-linecap=\"round\"/><circle cx=\"60\" cy=\"100\" r=\"12\" fill=\"#123a5e\"/><circle cx=\"30\" cy=\"20\" r=\"14\" fill=\"#e8488a\"/><\/svg><\/div>", "keywords": ["投石機", "紙杯塔", "抽籤"], "width": 1200}, {"id": "seen", "name": "別人怎麼發射", "color": "s11", "title": "別人怎麼讓東西飛出去", "html": "<div class=\"mrow\"><span class=\"mk\">看一看<\/span><p>不同的人，做出不一樣的發射器<\/p><\/div><div class=\"mrow\"><span class=\"mk\">記住<\/span><p>不用照著做，你們的要自己想<\/p><\/div><div class=\"vids\"><a class=\"goto\" data-yt=\"fob8CxZuBtA\" href=\"https://www.youtube.com/watch?v=fob8CxZuBtA\">▶ 發射器挑戰<\/a><a class=\"goto\" data-yt=\"dlDVgL3hAPY\" href=\"https://www.youtube.com/watch?v=dlDVgL3hAPY\">▶ 雙發射器<\/a><\/div>", "keywords": ["發射器", "別人怎麼", "飛出去"], "width": 1200}, {"id": "listen", "name": "它聽什麼", "color": "s3", "title": "它聽到什麼，伺服馬達就轉", "html": "<div class=\"mrow\"><span class=\"mk\">超音波組<\/span><p>手要靠多近，它才會轉？<\/p><\/div><div class=\"mrow\"><span class=\"mk\">麥克風組<\/span><p>聲音要多大，它才會轉？<\/p><\/div><div class=\"mrow\"><span class=\"mk\">再試試<\/span><p>伺服馬達會轉多少？轉完會轉回來嗎？<\/p><\/div>", "keywords": ["伺服馬達", "聽到什麼", "多近"], "width": 1200}, {"id": "build", "name": "組投石機", "color": "s4", "title": "將你的想像力透過這些材料變成一台投石機", "html": "<div class=\"mrow\"><span class=\"mk\">材料<\/span><p>吸管積木、吸管，加上你們的板子<\/p><\/div><div class=\"mrow\"><span class=\"mk\">做什麼<\/span><p>組一台投石機，材料怎麼用，<br>由你們自己想<\/p><\/div>", "keywords": ["吸管積木", "組起來", "材料"], "width": 1200}, {"id": "test", "name": "試射", "color": "s5", "title": "到塔前面試射", "html": "<div class=\"mrow\"><span class=\"mk\">做什麼<\/span><p>打不準、打不遠，就回去改，再來一次<\/p><\/div>", "keywords": ["試射", "打不準", "再來一次"], "width": 1100}, {"id": "ritual", "name": "啟動儀式", "color": "s6", "title": "替你們的投石機設計一個啟動儀式", "html": "<p class=\"big1\">要夠<em>中二<\/em><\/p><div class=\"mrow\"><span class=\"mk\">麥克風組<\/span><p>唸口號、唸咒語<\/p><\/div><div class=\"mrow\"><span class=\"mk\">超音波組<\/span><p>比手勢<\/p><\/div><div class=\"mrow\"><span class=\"mk\">三個人<\/span><p>每個人都要有份<\/p><\/div>", "keywords": ["儀式", "中二", "咒語", "手勢"], "width": 1200}, {"id": "launch", "name": "發射大會", "color": "s7", "title": "發射大會", "html": "<div class=\"mrow\"><span class=\"mk\">輪到你們<\/span><p>先做儀式，再發射<\/p><\/div><div class=\"mrow\"><span class=\"mk\">拍下來<\/span><p>一個人用手機，從儀式拍到發射<\/p><\/div>", "keywords": ["發射大會", "輪到"], "width": 1100}, {"id": "reveal", "name": "這一週的道理", "color": "s8", "title": "你們板子裡那段程式，可以是 AI 寫的", "html": "<div class=\"mg-grid\">\n<div class=\"mg mg-past\"><span class=\"mg-k\">以前<\/span><p>要讓板子動起來，<br>得先學電子、學寫程式<\/p><\/div>\n<div class=\"mg mg-now\"><span class=\"mg-k\">現在，只要有想像力<\/span><p class=\"mg-bubble\">「我們三個一起喊<br><b>天雷之矢，發射！<\/b><br>喊滿兩秒，它就發射」<\/p><\/div>\n<div class=\"mg mg-code\"><span class=\"mg-k\">AI 明白之後，寫出程式（示意）<\/span><pre>int level = analogRead(MIC);      // 聽聲音\nif (level &gt; 600) loud += 50;      // 夠大聲，開始計時\nelse loud = 0;                    // 停下來就重來\nif (loud &gt;= 2000) {               // 喊滿兩秒\n  arm.write(90);                  // 放開，發射！\n  delay(800);\n  arm.write(0);                   // 收回來\n  loud = 0;\n}\ndelay(50);<\/pre><\/div>\n<div class=\"mg mg-live\"><span class=\"mg-k\">材料活起來<\/span><svg class=\"mg-scene\" viewBox=\"0 0 560 240\" width=\"560\" height=\"240\">\n<line x1=\"40\" y1=\"200\" x2=\"200\" y2=\"200\" stroke=\"#f39200\" stroke-width=\"14\" stroke-linecap=\"round\"/>\n<line x1=\"120\" y1=\"200\" x2=\"120\" y2=\"170\" stroke=\"#1f8fd4\" stroke-width=\"14\" stroke-linecap=\"round\"/>\n<g class=\"mg-arm\"><line x1=\"120\" y1=\"170\" x2=\"40\" y2=\"120\" stroke=\"#8fbf3f\" stroke-width=\"14\" stroke-linecap=\"round\"/><circle class=\"mg-ballseat\" cx=\"40\" cy=\"120\" r=\"4\" fill=\"#8fbf3f\"/><\/g>\n<circle cx=\"120\" cy=\"170\" r=\"12\" fill=\"#123a5e\"/>\n<circle class=\"mg-ball\" cx=\"40\" cy=\"108\" r=\"12\" fill=\"#e8488a\"/>\n<g class=\"mg-cups\"><polygon class=\"mg-cup\" points=\"400,140 444,140 438,184 406,184\" fill=\"#fff\" stroke=\"#123a5e\" stroke-width=\"4\"/><polygon class=\"mg-cup\" points=\"450,140 494,140 488,184 456,184\" fill=\"#fff\" stroke=\"#123a5e\" stroke-width=\"4\"/><polygon class=\"mg-cup\" points=\"425,94 469,94 463,138 431,138\" fill=\"#fff\" stroke=\"#123a5e\" stroke-width=\"4\"/><\/g>\n<line x1=\"380\" y1=\"186\" x2=\"520\" y2=\"186\" stroke=\"#cfe3f2\" stroke-width=\"4\"/>\n<g fill=\"#ffbe03\"><circle class=\"mg-spark\" cx=\"70\" cy=\"60\" r=\"10\"/><circle class=\"mg-spark\" cx=\"105\" cy=\"40\" r=\"7\"/><circle class=\"mg-spark\" cx=\"145\" cy=\"58\" r=\"9\"/><\/g>\n<\/svg><p class=\"mg-say\">AI 是想像力的理解者，<br>也是陪你一起做出來的協作者<\/p><\/div>\n<\/div>", "keywords": ["程式", "學習門檻", "想像力"], "width": 1700, "x": 1250, "y": 3380}, {"id": "submit", "name": "交出去", "color": "s9", "title": "交出去", "html": "<div class=\"mrow\"><span class=\"mk\">交什麼<\/span><p>發射那一段影片，從儀式拍到發射<\/p><\/div><div class=\"mrow\"><span class=\"mk\">選<\/span><p>W8、課堂<\/p><\/div><div class=\"mrow\"><span class=\"mk\">一組交一次<\/span><p>一個人交就好，<br>其他組員的本名填進去<\/p><\/div><figure class=\"qr\"><img src=\"每週上傳-QR.png\" alt=\"上傳的碼\"><figcaption>上傳<\/figcaption><\/figure>", "keywords": ["上傳", "交出去", "影片"], "width": 1200}]}</script>
+<script src="lib/gsap.min.js"></script>
+
+<script>
+  const DECK = JSON.parse(document.getElementById("deck").textContent);
+  const world = document.getElementById("world"), svg = document.getElementById("paths");
+  const whereEl = document.getElementById("where");
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  if (DECK.title) document.title = DECK.title;
+  for (const [k, v] of Object.entries(DECK.colors || {})) document.documentElement.style.setProperty("--" + k, v);
+  const col = c => !c ? null : c.startsWith("#") ? c : `var(--${c})`;
+
+  // ── 1. 把每一站畫出來 ──
+  const stations = DECK.stations;
+  const n = stations.length;
+  const grow = Math.max(1, n / 6);
+  const W = Math.round(4200 * grow), H = Math.round(2600 * grow);
+  world.style.width = W + "px"; world.style.height = H + "px";
+  svg.setAttribute("width", W); svg.setAttribute("height", H); svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+
+  function zoneHTML(st, i) {
+    let h = "";
+    if (st.tag !== false) h += `<span class="tag">${esc(st.tag || `第${"一二三四五六七八九十"[i] || i + 1}站`)}</span>`;
+    h += `<h2>${esc(st.title || st.name)}</h2>`;
+    for (const p of st.body || []) h += `<p>${esc(p)}</p>`;
+    if (st.chips) h += `<div>${st.chips.map(c => `<span class="chip" style="background:${col(c.color) || "var(--muted)"}">${esc(c.text)}</span>`).join("")}</div>`;
+    if (st.html) h += st.html;   // 需要畫圖示的站才用，內容由寫 JSON 的人負責
+    return h;
+  }
+  const center = document.createElement("section");
+  center.className = "zone center"; center.id = "z-title"; center.dataset.name = "開頭";
+  center.innerHTML = `<h2>${esc(DECK.title || "")}</h2>` + (DECK.subtitle ? `<p>${esc(DECK.subtitle)}</p>` : "");
+  world.appendChild(center);
+  stations.forEach((st, i) => {
+    const z = document.createElement("section");
+    z.className = "zone"; z.id = "z-" + st.id; z.dataset.name = st.name;
+    if (st.color) z.style.setProperty("--c", col(st.color));
+    if (st.width) z.style.width = st.width + "px";
+    z.innerHTML = zoneHTML(st, i);
+    world.appendChild(z);
+  });
+
+  // ── 2. 排位置：主題在中間，各站沿橢圓順時針排，從左上開始 ──
+  function place(el, cx, cy) { el.style.left = (cx - el.offsetWidth / 2) + "px"; el.style.top = (cy - el.offsetHeight / 2) + "px"; }
+  place(center, W / 2, H / 2);
+  const rx = W * 0.37, ry = H * 0.35, a0 = DECK.startAngle ?? -150;
+  stations.forEach((st, i) => {
+    const el = document.getElementById("z-" + st.id);
+    if (st.x != null && st.y != null) return place(el, st.x, st.y);
+    const a = (a0 + 360 * i / n) * Math.PI / 180;
+    place(el, W / 2 + rx * Math.cos(a), H / 2 + ry * Math.sin(a));
+  });
+
+  // ── 3. 站與站之間畫虛線路，從主題拉一條到第一站 ──
+  const mid = el => ({ x: el.offsetLeft + el.offsetWidth / 2, y: el.offsetTop + el.offsetHeight / 2 });
+  const chain = [center, ...stations.map(st => document.getElementById("z-" + st.id))];
+  let d = "";
+  for (let i = 0; i < chain.length - 1; i++) {
+    const a = mid(chain[i]), b = mid(chain[i + 1]);
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    const cx = mx + (W / 2 - mx) * -0.18, cy = my + (H / 2 - my) * -0.18;   // 往外彎一點
+    d += `M${a.x} ${a.y} Q${cx} ${cy} ${b.x} ${b.y} `;
+  }
+  svg.innerHTML = `<path d="${d}" fill="none" stroke="#cfc6b6" stroke-width="10" stroke-dasharray="4 26" stroke-linecap="round"/>`;
+
+  // ── 4. 鏡頭 ──
+  const ORDER = ["z-title", ...stations.map(st => "z-" + st.id), "z-title"];
+  let cam = { x: 0, y: 0, s: 1 }, anim = null, step = -1, current = null;
+  // 站內動畫掛在這裡：deckHooks["z-站id"] = { enter(), step() 回傳 true 表示這一下被站內用掉了, leave() }
+  const hooks = window.deckHooks = {};
+  const apply = () => world.style.transform = `translate(${cam.x}px, ${cam.y}px) scale(${cam.s})`;
+  const hudH = () => document.body.classList.contains("clean") ? 0 : 70;
+  function camFor(r, pad) {
+    const vw = innerWidth, vh = innerHeight - hudH();
+    const s = Math.min(vw / (r.w + pad * 2), vh / (r.h + pad * 2));
+    return { s, x: vw / 2 - (r.x + r.w / 2) * s, y: vh / 2 - (r.y + r.h / 2) * s };
+  }
+  const rectOf = id => { const el = document.getElementById(id); return { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight }; };
+  function allRect() {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const el of chain) { x0 = Math.min(x0, el.offsetLeft); y0 = Math.min(y0, el.offsetTop);
+      x1 = Math.max(x1, el.offsetLeft + el.offsetWidth); y1 = Math.max(y1, el.offsetTop + el.offsetHeight); }
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  }
+
+  // 飛過去：遠距離時中途拉遠 35%，像在地圖上移動
+  function flyTo(target, ms = DECK.flyMs || 1300) {
+    if (anim) cancelAnimationFrame(anim);
+    const from = { ...cam }, t0 = performance.now();
+    const dip = Math.hypot(target.x - from.x, target.y - from.y) > 200 ? 0.35 : 0;
+    const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    const tick = now => {
+      const t = Math.min(1, (now - t0) / ms), e = ease(t);
+      const s = Math.exp(Math.log(from.s) + (Math.log(target.s) - Math.log(from.s)) * e) * (1 - dip * Math.sin(Math.PI * e));
+      const vw = innerWidth / 2, vh = (innerHeight - hudH()) / 2;
+      const cx0 = (vw - from.x) / from.s, cy0 = (vh - from.y) / from.s;
+      const cx1 = (vw - target.x) / target.s, cy1 = (vh - target.y) / target.s;
+      const cx = cx0 + (cx1 - cx0) * e, cy = cy0 + (cy1 - cy0) * e;
+      cam = { s, x: vw - cx * s, y: vh - cy * s }; apply();
+      if (t < 1) anim = requestAnimationFrame(tick); else { cam = target; apply(); anim = null; }
+    };
+    anim = requestAnimationFrame(tick);
+  }
+  function go(id) {
+    if (current !== id) { hooks[current]?.leave?.(); setTimeout(() => current === id && hooks[id]?.enter?.(), (DECK.flyMs || 1300) * 0.8); }
+    current = id;
+    document.querySelectorAll(".zone").forEach(z => z.classList.toggle("on", z.id === id));
+    whereEl.textContent = document.getElementById(id).dataset.name;
+    flyTo(camFor(rectOf(id), 140));
+  }
+  function overview() {
+    hooks[current]?.leave?.();
+    current = null; step = -1;
+    document.querySelectorAll(".zone").forEach(z => z.classList.remove("on"));
+    whereEl.textContent = "全圖";
+    flyTo(camFor(allRect(), 60));
+  }
+  const next = () => { if (current && hooks[current]?.step?.()) return; step = Math.min(step + 1, ORDER.length - 1); go(ORDER[step]); };
+  const prev = () => { step = Math.max(step - 1, 0); go(ORDER[step]); };
+
+  document.getElementById("next").onclick = next;
+  document.getElementById("prev").onclick = prev;
+  document.getElementById("all").onclick = overview;
+  document.querySelectorAll(".zone").forEach(z => z.addEventListener("click", () => { step = ORDER.indexOf(z.id); go(z.id); }));
+  addEventListener("keydown", e => {
+    if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") { e.preventDefault(); next(); }
+    else if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); prev(); }
+    else if (e.key === "0" || e.key === "Escape") overview();
+    else if (e.key === "h" || e.key === "H") document.body.classList.toggle("clean");
+  });
+  addEventListener("resize", () => { cam = current ? camFor(rectOf(current), 140) : camFor(allRect(), 60); apply(); });
+
+  // ── 5. 聽話跳：瀏覽器內建語音辨識，聽到關鍵詞就飛過去 ──
+  const KEYWORDS = { "z-title": DECK.titleKeywords || ["回到開頭", "大地圖", "看全圖"] };
+  stations.forEach(st => KEYWORDS["z-" + st.id] = st.keywords || [st.name]);
+  const VOICE_NEXT = ["下一站", "下一步"], VOICE_PREV = ["上一站"];
+  const micBtn = document.getElementById("mic"), cap = document.getElementById("caption");
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null, listening = false, lastJump = 0, handled = "";
+
+  // 同一句裡講到好幾站的詞，跳到最後講到的那一站。比的是詞的結尾，
+  // 所以「設計文件」與「文件」同時中時，結尾一樣，取長的那個
+  function matchZone(text) {
+    let best = null, bestEnd = -1;
+    for (const [id, words] of Object.entries(KEYWORDS))
+      for (const w of words) {
+        const p = text.lastIndexOf(w); if (p < 0) continue;
+        const end = p + w.length;
+        if (end > bestEnd || (end === bestEnd && w.length > best.w.length)) { bestEnd = end; best = { id, w }; }
+      }
+    return best;
+  }
+  function showCaption(text, hit) {
+    cap.style.display = "block";
+    const t = text.slice(-60), i = hit ? t.lastIndexOf(hit.w) : -1;
+    cap.innerHTML = i >= 0 ? `${esc(t.slice(0, i))}<span class="hit">${esc(hit.w)}</span>${esc(t.slice(i + hit.w.length))}` : esc(t);
+  }
+  function startListening() {
+    if (!SR) { cap.style.display = "block"; cap.textContent = "這個瀏覽器不支援語音辨識，請用 Chrome 開。"; return; }
+    rec = new SR();
+    rec.lang = DECK.lang || "zh-TW"; rec.continuous = true; rec.interimResults = true;
+    rec.onresult = e => {
+      const r = e.results[e.results.length - 1], text = r[0].transcript;
+      // 只看這一句還沒處理過的那一段，避免同一個詞被反覆觸發
+      const fresh = text.startsWith(handled) ? text.slice(handled.length) : text;
+      const hit = matchZone(fresh);
+      showCaption(text, hit);
+      if (performance.now() - lastJump < 1500) return;
+      if (VOICE_NEXT.some(w => fresh.includes(w))) { lastJump = performance.now(); handled = text; next(); }
+      else if (VOICE_PREV.some(w => fresh.includes(w))) { lastJump = performance.now(); handled = text; prev(); }
+      else if (hit && hit.id !== current) { lastJump = performance.now(); handled = text; step = ORDER.indexOf(hit.id); go(hit.id); }
+      if (r.isFinal) handled = "";
+    };
+    rec.onerror = e => { cap.style.display = "block"; cap.textContent = "語音辨識停了：" + e.error; };
+    rec.onend = () => { if (listening) rec.start(); };
+    rec.start(); listening = true;
+    micBtn.textContent = "■ 停止聽"; micBtn.classList.add("live");
+    cap.style.display = "block"; cap.textContent = "在聽了，開始講吧。";
+  }
+  function stopListening() {
+    listening = false; if (rec) rec.stop();
+    micBtn.textContent = "🎤 開始聽"; micBtn.classList.remove("live");
+    setTimeout(() => cap.style.display = "none", 800);
+  }
+  micBtn.onclick = () => listening ? stopListening() : startListening();
+
+  window.__deck = { matchZone, go, overview, next, ORDER };   // 給驗收用
+  cam = camFor(allRect(), 60); apply();
+</script>
+<script>
+// G4460 W8 投石機大地圖的風格，配 風格.html。
+// 站與站之間的虛線換成吸管：每一段用要去的那一站的顏色，兩端一顆接頭（圓點，中間一個孔）。
+// 中間那一塊的兩側各畫一個吸管接成的三角形。
+(() => {
+  const ns = "http://www.w3.org/2000/svg";
+  const ids = window.__deck.ORDER.filter(id => id !== "z-title");
+  const svg = document.getElementById("paths");
+  const p = svg.querySelector("path");
+  if (p) {
+    const segs = p.getAttribute("d").trim().split(/(?=M)/);
+    svg.innerHTML = "";
+    segs.forEach((d, i) => {
+      const z = document.getElementById(ids[i]);
+      const c = z ? getComputedStyle(z).getPropertyValue("--c").trim() : "#1f8fd4";
+      for (const [w, col, op, tr] of [[34, "rgba(18,58,94,.12)", 1, "translate(0 7)"], [26, c, 1, ""], [7, "#fff", .45, "translate(-3 -6)"]]) {
+        const e = document.createElementNS(ns, "path");
+        e.setAttribute("d", d); e.setAttribute("fill", "none"); e.setAttribute("stroke", col);
+        e.setAttribute("stroke-width", w); e.setAttribute("stroke-linecap", "round"); e.setAttribute("opacity", op);
+        if (tr) e.setAttribute("transform", tr);
+        svg.appendChild(e);
+      }
+      const probe = document.createElementNS(ns, "path");
+      probe.setAttribute("d", d);
+      const L = probe.getTotalLength ? (svg.appendChild(probe), probe.getTotalLength()) : 0;
+      for (const at of [0, L]) {
+        if (!L) break;
+        const pt = probe.getPointAtLength(at);
+        for (const [r, fill] of [[24, "#123a5e"], [9, "#eaf5fc"]]) {
+          const k = document.createElementNS(ns, "circle");
+          k.setAttribute("cx", pt.x); k.setAttribute("cy", pt.y); k.setAttribute("r", r); k.setAttribute("fill", fill);
+          svg.appendChild(k);
+        }
+      }
+      probe.remove();
+    });
+  }
+  // 中間那一塊兩側的吸管三角形
+  const c = document.getElementById("z-title");
+  const tri = (cols, flip) => {
+    const s = document.createElementNS(ns, "svg");
+    s.setAttribute("viewBox", "0 0 220 200"); s.setAttribute("class", "truss");
+    s.style.width = "220px"; s.style.height = "200px"; s.style.top = "50%"; s.style.marginTop = "-100px";
+    s.style[flip ? "right" : "left"] = "-150px";
+    const pts = [[20, 180], [200, 180], [110, 20]];
+    [[0, 1], [1, 2], [2, 0]].forEach(([a, b], k) => {
+      const l = document.createElementNS(ns, "line");
+      l.setAttribute("x1", pts[a][0]); l.setAttribute("y1", pts[a][1]); l.setAttribute("x2", pts[b][0]); l.setAttribute("y2", pts[b][1]);
+      l.setAttribute("stroke", cols[k]); l.setAttribute("stroke-width", 16); l.setAttribute("stroke-linecap", "round");
+      s.appendChild(l);
+    });
+    for (const [x, y] of pts) for (const [r, f] of [[16, "#ffbe03"], [6, "#123a5e"]]) {
+      const k = document.createElementNS(ns, "circle"); k.setAttribute("cx", x); k.setAttribute("cy", y); k.setAttribute("r", r); k.setAttribute("fill", f); s.appendChild(k);
+    }
+    c.appendChild(s);
+  };
+  tri(["#e8488a", "#8fbf3f", "#1f8fd4"], false);
+  tri(["#f39200", "#1f8fd4", "#8fbf3f"], true);
+  // 大標題斷在逗號後面，不讓「石機」掉到第二行（2026-11-11 換成「用你的魔法，啟動投石機」時加；範本會跳脫標題裡的 HTML，所以在這裡換行）
+  const th = c.querySelector("h2");
+  if (th) th.innerHTML = th.innerHTML.replace("，", "<br>");   // 換行處不留逗號（Kevin 11-11：「排版那個逗號應該可以去掉」）
+  // 第六站標題太長會斷成「投／石機」，斷在「變成」前面（2026-11-11 Kevin 改成「將你的想像力透過這些材料變成一台投石機」時加）
+  const bh = document.querySelector("#z-build h2");
+  if (bh) bh.innerHTML = bh.innerHTML.replace("材料變成", "材料<br>變成");
+})();
+
+</script>
+<script>
+// G4460 W8 投石機大地圖：照抄 W7 那一份（還沒到的站只看得到第幾站和站名，飛到了才揭開，Kevin 2026-10-31 選）。
+// 引擎是大地圖簡報技能的範本，不改它；這份只掛在 deckHooks 上。
+// 揭開：蓋板碎成小塊飛散、光點從站名噴出、內容一行一行浮上來。電腦設成減少動態效果時只淡入。
+// 按 L 全部重新蓋起來（排練用）；按 C 或點站名，只蓋或揭開目前這一站。
+(() => {
+  const css = document.createElement("style");
+  css.textContent = `
+    .zone.locked > :not(.tag):not(h2):not(.veil) { visibility: hidden; }
+    .veil { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 0 0 28px 28px; pointer-events: none; }
+    .veil i { position: absolute; display: block; border-radius: 6px;
+      background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--c) 22%, #fff) 0 18px, color-mix(in srgb, var(--c) 12%, #fff) 18px 36px); }
+    .spark { position: absolute; width: 18px; height: 18px; border-radius: 50%; background: var(--c); pointer-events: none; }
+    .ring { position: absolute; border: 6px solid var(--c); border-radius: 50%; pointer-events: none; }
+  `;
+  document.head.appendChild(css);
+
+  // 大標題斷在問號後面，不讓「來」一個字掉到第二行（範本會跳脫標題裡的 HTML，所以在這裡換行）
+  const th = document.querySelector("#z-title h2");
+  th.innerHTML = th.innerHTML.replace("？", "？<br>");
+
+  const COLS = 8, ROWS = 4;
+  const zones = window.__deck.ORDER.filter(id => id !== "z-title").map(id => document.getElementById(id));
+  const playing = {};
+  let reduced = false;
+  gsap.matchMedia().add("(prefers-reduced-motion: reduce)", () => { reduced = true; return () => { reduced = false; }; });
+
+  function lock(z) {
+    z.querySelector(".veil")?.remove();
+    const h2 = z.querySelector("h2");
+    const top = h2.offsetTop + h2.offsetHeight + 12;
+    const veil = document.createElement("div");
+    veil.className = "veil"; veil.style.top = top + "px";
+    const w = z.offsetWidth, h = z.offsetHeight - top, gap = 6;
+    const tw = (w - gap * (COLS + 1)) / COLS, th = (h - gap * (ROWS + 1)) / ROWS;
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      const t = document.createElement("i");
+      Object.assign(t.style, { left: gap + c * (tw + gap) + "px", top: gap + r * (th + gap) + "px", width: tw + "px", height: th + "px" });
+      veil.appendChild(t);
+    }
+    z.appendChild(veil);
+    z.classList.add("locked");
+    gsap.set(z.querySelectorAll(":scope > :not(.tag):not(h2):not(.veil)"), { clearProps: "all" });
+  }
+
+  function reveal(z) {
+    if (!z.classList.contains("locked")) return;
+    const veil = z.querySelector(".veil"), tiles = veil.querySelectorAll("i");
+    const body = z.querySelectorAll(":scope > :not(.tag):not(h2):not(.veil)");
+    const marks = z.querySelectorAll(".mk, .goto");
+    z.classList.remove("locked");
+    const tl = gsap.timeline({ onComplete: () => { veil.remove(); delete playing[z.id]; } });
+    playing[z.id] = tl;
+
+    if (reduced) {
+      tl.to(veil, { opacity: 0, duration: 0.4 }).from(body, { opacity: 0, duration: 0.4 }, 0);
+      return;
+    }
+    const h2 = z.querySelector("h2");
+    const ox = h2.offsetLeft + Math.min(h2.offsetWidth, 420) / 2, oy = h2.offsetTop + h2.offsetHeight / 2;
+
+    // 一、站名先抖一下、亮一下，告訴眼睛「要開了」
+    tl.addLabel("charge")
+      .to(h2, { scale: 1.08, duration: 0.25, ease: "power2.out", transformOrigin: "left center" }, "charge")
+      .to(h2, { scale: 1, duration: 0.5, ease: "elastic.out(1, 0.4)" }, "charge+=0.25");
+
+    // 二、光圈與光點從站名噴出
+    tl.addLabel("burst", "charge+=0.25");
+    for (let k = 0; k < 2; k++) {
+      const ring = document.createElement("div"); ring.className = "ring";
+      Object.assign(ring.style, { left: ox - 60 + "px", top: oy - 60 + "px", width: "120px", height: "120px" });
+      z.appendChild(ring);
+      tl.fromTo(ring, { scale: 0.2, opacity: 0.6 }, { scale: 9 + k * 4, opacity: 0, duration: 0.9 + k * 0.2, ease: "power2.out", onComplete: () => ring.remove() }, `burst+=${k * 0.12}`);
+    }
+    for (let k = 0; k < 28; k++) {
+      const s = document.createElement("div"); s.className = "spark";
+      Object.assign(s.style, { left: ox - 9 + "px", top: oy - 9 + "px" });
+      z.appendChild(s);
+      const a = Math.random() * Math.PI * 2, d = 260 + Math.random() * 520;
+      tl.to(s, { x: Math.cos(a) * d, y: Math.sin(a) * d, scale: 0.2 + Math.random() * 0.8, opacity: 0,
+        duration: 0.7 + Math.random() * 0.5, ease: "power3.out", onComplete: () => s.remove() }, "burst");
+    }
+
+    // 三、蓋板從中間往外碎開
+    tl.to(tiles, { x: () => gsap.utils.random(-260, 260), y: () => gsap.utils.random(120, 420), rotation: () => gsap.utils.random(-120, 120),
+      scale: 0.3, opacity: 0, duration: 0.8, ease: "power2.in", stagger: { each: 0.02, from: "center", grid: [ROWS, COLS] } }, "burst+=0.05");
+
+    // 四、內容一行一行浮上來，標籤蓋章似地砸進來
+    tl.from(body, { y: 50, opacity: 0, filter: "blur(10px)", duration: 0.6, ease: "power3.out", stagger: 0.14, clearProps: "filter" }, "burst+=0.35")
+      .from(marks, { scale: 1.8, opacity: 0, duration: 0.45, ease: "back.out(3)", stagger: 0.14 }, "burst+=0.45");
+  }
+
+  // 11/3 Kevin 問「打開內容後又可以手動把內容遮蓋起來嗎」：在那一站按 C 或點站名，蓋回去；再按一次 C、點站名或按 →，重新揭開
+  let here = null;
+  function toggle(z) {
+    if (!z) return;
+    playing[z.id]?.progress(1);
+    if (z.classList.contains("locked")) reveal(z); else lock(z);
+  }
+  zones.forEach(z => {
+    lock(z);
+    window.deckHooks[z.id] = {
+      enter: () => { here = z; reveal(z); },
+      // 還在揭開時按 →，先把這一段播完，不換站；手動蓋起來的站按 →，先揭開
+      step: () => {
+        const tl = playing[z.id]; if (tl && tl.isActive()) { tl.progress(1); return true; }
+        if (z.classList.contains("locked")) { reveal(z); return true; }
+        return false;
+      },
+      leave: () => { playing[z.id]?.progress(1); if (here === z) here = null; },
+    };
+    z.querySelector("h2").addEventListener("click", e => { if (here === z) { e.stopPropagation(); toggle(z); } });
+  });
+
+  addEventListener("keydown", e => {
+    if (e.key === "l" || e.key === "L") zones.forEach(z => { playing[z.id]?.progress(1); lock(z); });
+    if (e.key === "c" || e.key === "C") toggle(here);
+  });
+  window.__reveal = { reveal, lock, zones };   // 給驗收用
+})();
+
+</script>
+<script>
+// G4460 W7 大地圖：拿掉語音（Kevin 2026-11-03：「語音輸入部分可以刪除，我覺得沒有必要」）。做法照 I3840 同日那一份。
+// 範本在大腦裡不能改，所以由這一份地圖自己拿掉：開始聽的按鈕、字幕列、說明裡那一行。上課用按鍵或點區塊換站。
+(() => {
+  const mic = document.getElementById("mic");
+  if (mic) mic.remove();
+  const cap = document.getElementById("caption");
+  if (cap) cap.remove();
+  const help = document.getElementById("help");
+  if (help) help.innerHTML = "← → 或空白鍵：下一站<br>0：看全圖　點區塊：飛過去<br>C 或點站名：蓋上／打開這一站　H：藏提示";
+})();
+
+</script>
+<script>
+// G4460 W8 投石機大地圖：站裡的影片按鈕按下去，YouTube 官方播放器蓋滿整個畫面播；按 Esc 或下面的 × 收起來，回到那一站。
+// 影片不剪、不加字，只用官方嵌入播放器播（2026-11-10 Kevin 要「讓他們知道可能性」）。
+// 按鈕寫法：<a class="goto" data-yt="影片代號" href="https://www.youtube.com/watch?v=影片代號">按鈕上的字</a>
+(() => {
+  const css = document.createElement("style");
+  css.textContent = `
+    #ytLayer { position: fixed; inset: 0; z-index: 50; background: #0b2945; display: none; align-items: center; justify-content: center; }
+    #ytLayer.on { display: flex; }
+    #ytLayer iframe { width: min(96vw, calc(92vh * 16 / 9)); aspect-ratio: 16 / 9; border: 0; border-radius: 14px; background: #000; }
+    #ytLayer .x { position: absolute; left: 50%; transform: translateX(-50%); bottom: 10px; font: 700 18px "Noto Sans TC", sans-serif; color: #123a5e;
+      background: #ffbe03; border: 0; border-radius: 20px; padding: 6px 18px; cursor: pointer; }
+    .vids { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 26px; }
+  `;
+  document.head.appendChild(css);
+  const layer = document.createElement("div");
+  layer.id = "ytLayer";
+  layer.innerHTML = '<button class="x">× 收起來（Esc）</button>';
+  document.body.appendChild(layer);
+  function open(id) {
+    layer.querySelector("iframe")?.remove();
+    const f = document.createElement("iframe");
+    f.src = `https://www.youtube.com/embed/${id}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
+    f.allow = "autoplay; fullscreen; encrypted-media";
+    f.allowFullscreen = true;
+    layer.insertBefore(f, layer.firstChild);
+    layer.classList.add("on");
+  }
+  function close() { layer.querySelector("iframe")?.remove(); layer.classList.remove("on"); window.focus(); }
+  document.querySelectorAll(".goto[data-yt]").forEach(b => {
+    b.removeAttribute("target");
+    b.addEventListener("click", e => { e.preventDefault(); e.stopPropagation(); open(b.dataset.yt); });
+  });
+  layer.querySelector(".x").addEventListener("click", close);
+  document.addEventListener("keydown", e => {
+    if (!layer.classList.contains("on")) return;
+    e.stopPropagation();
+    if (e.key === "Escape") close();
+  }, true);
+})();
+
+</script>
+<script>
+// G4460 W8 投石機大地圖「這一週的道理」那一站：按一下演一段（Kevin 2026-11-10）。
+// 他的話：現在只要有想像力，加上 AI 寫程式，驅動 Arduino 這件事就跟過往不一樣；用有魔法感的手勢或咒語，
+// 把互動的情境說清楚，AI 明白之後，就把它變成讓這個材料活起來的狀態。
+// 四段：以前 → 現在你只要說清楚 → AI 明白之後寫出程式 → 材料活起來（投石機發射、紙杯塔倒）。
+// 掛在 揭開.js 的 deckHooks 外面：先讓揭開播完，再一段一段演；四段演完，下一下才換站。
+(() => {
+  const z = document.getElementById("z-reveal");
+  if (!z) return;
+  const old = window.deckHooks["z-reveal"] || {};
+  const parts = [...z.querySelectorAll(".mg")];
+  const code = z.querySelector(".mg-code pre");
+  const full = code ? code.textContent : "";
+  let shown = 0, tl = null;
+
+  function reset() {
+    tl?.kill(); tl = null; shown = 0;
+    gsap.set(parts, { opacity: 0, y: 30 });
+    if (code) code.textContent = "";
+    gsap.set(z.querySelectorAll(".mg-arm"), { rotation: 0, svgOrigin: "120 170" });
+    gsap.set(z.querySelectorAll(".mg-ball"), { x: 0, y: 0, opacity: 1 });
+    gsap.set(z.querySelectorAll(".mg-cup"), { x: 0, y: 0, rotation: 0 });
+    gsap.set(z.querySelectorAll(".mg-spark"), { opacity: 0, scale: 0.4, transformOrigin: "50% 50%" });
+  }
+  function play(k) {
+    const p = parts[k];
+    tl = gsap.timeline();
+    tl.to(p, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" });
+    if (p.classList.contains("mg-code") && code) {
+      const o = { n: 0 };
+      tl.to(o, { n: full.length, duration: 2.2, ease: "none", onUpdate: () => { code.textContent = full.slice(0, Math.round(o.n)); } });
+    }
+    if (p.classList.contains("mg-live")) {
+      tl.to(z.querySelectorAll(".mg-spark"), { opacity: 1, scale: 1, duration: 0.3, stagger: 0.08, ease: "back.out(3)" })
+        .to(z.querySelectorAll(".mg-spark"), { opacity: 0, duration: 0.3 })
+        .to(z.querySelector(".mg-arm"), { rotation: -62, svgOrigin: "120 170", duration: 0.18, ease: "power4.in" }, "<")
+        .to(z.querySelector(".mg-ball"), { keyframes: [{ x: 160, y: -120, duration: 0.45, ease: "power1.out" }, { x: 330, y: 8, duration: 0.45, ease: "power1.in" }, { x: 380, y: 70, opacity: 0, duration: 0.4 }] }, "<0.1")
+        .to(z.querySelectorAll(".mg-cup"), { x: (i) => [30, 60, 46][i], y: (i) => [40, 40, 96][i], rotation: (i) => [40, 75, -110][i], duration: 0.6, ease: "bounce.out", stagger: 0.05 }, "<0.8")
+        .to(z.querySelector(".mg-say"), { opacity: 1, y: 0, duration: 0.5 }, "<0.3");
+    }
+  }
+  window.deckHooks["z-reveal"] = {
+    enter: () => { old.enter?.(); reset(); },
+    step: () => {
+      if (old.step?.()) return true;                 // 揭開還沒播完，先播完
+      if (tl && tl.isActive()) { tl.progress(1); return true; }  // 這一段還在演，先演完
+      if (shown < parts.length) { play(shown++); return true; }
+      return false;
+    },
+    leave: () => { old.leave?.(); tl?.progress(1); },
+  };
+  reset();
+  gsap.set(z.querySelector(".mg-say"), { opacity: 0, y: 20 });
+})();
+
+</script>
+<script>
+// G4460 W8 投石機大地圖：「以前的我們」照片牆疊在大地圖上（做法照雨天那張的 起點疊上.js）。
+// Kevin 2026-11-11：「在大地圖的某一張簡報有個按鈕，按下去之後可以看看我們以前的經歷，從小孩到大學生研究生都有的那個活動」，
+// 照片排成遠看像一台投石機。按鈕寫法：<a class="goto" data-past href="以前/index.html">字</a>。按 Esc 或下面的 × 收起來。
+(() => {
+  const btn = document.querySelector(".goto[data-past]");
+  if (!btn) return;
+  const css = document.createElement("style");
+  css.textContent = `
+    #pastLayer { position: fixed; inset: 0; z-index: 50; background: #eaf5fc; display: none; }
+    #pastLayer.on { display: block; }
+    #pastLayer iframe { width: 100%; height: 100%; border: 0; display: block; }
+    #pastLayer .x { position: absolute; left: 50%; transform: translateX(-50%); bottom: 8px; z-index: 2; font: 700 16px "Noto Sans TC", sans-serif; color: #123a5e;
+      background: #ffbe03; border: 0; border-radius: 20px; padding: 5px 16px; cursor: pointer; opacity: .6; }
+    #pastLayer .x:hover { opacity: 1; }
+  `;
+  document.head.appendChild(css);
+  const layer = document.createElement("div");
+  layer.id = "pastLayer";
+  layer.innerHTML = '<button class="x">× 收起來（Esc）</button>';
+  document.body.appendChild(layer);
+  let frame = null;
+  function open() {
+    frame?.remove();                       // 每次重開，照片重新一張一張亮起來
+    frame = document.createElement("iframe");
+    frame.src = btn.getAttribute("href");
+    frame.addEventListener("load", () => {
+      frame.contentWindow.addEventListener("keydown", e => { if (e.key === "Escape" && !e.defaultPrevented) close(); });
+      frame.contentWindow.focus();
+    });
+    layer.insertBefore(frame, layer.firstChild);
+    layer.classList.add("on");
+  }
+  function close() { layer.classList.remove("on"); frame?.remove(); frame = null; window.focus(); }
+  btn.removeAttribute("target");
+  btn.addEventListener("click", e => { e.preventDefault(); e.stopPropagation(); open(); });
+  layer.querySelector(".x").addEventListener("click", close);
+  document.addEventListener("keydown", e => {
+    if (!layer.classList.contains("on")) return;
+    e.stopPropagation();
+    if (e.key === "Escape") close();
+  }, true);
+})();
+
+</script>
+
+</body>
+</html>
