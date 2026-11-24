@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>我選了電鍋：三輪整理｜W10 動畫簡報</title>
+<link rel="stylesheet" href="../../reveal/dist/reveal.css">
+<style>
+  :root{
+    --black:#05080A; --fg:#FFFFFF; --acc:#FF4B3E; --dim:#9AA6AB;
+    --panel:#0C1216; --edge:#2A363D; --hair:rgba(255,255,255,.22);
+  }
+  html,body{ background:var(--black); margin:0; }
+  .reveal{ font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif; color:var(--fg); }
+  .reveal .slides{ text-align:left; }
+
+  .reveal .slides > section.pg{
+    flex-direction:column;
+    height:900px !important; box-sizing:border-box;
+    padding:50px 96px 32px; text-align:left;
+    background:var(--black); overflow:hidden;
+  }
+  .reveal .slides > section.pg.present{ display:flex !important; }
+  .frame{ position:absolute; inset:26px 40px; border:2px solid var(--hair); pointer-events:none; z-index:4; }
+
+  .hd{ display:flex; justify-content:space-between; align-items:baseline;
+       flex:0 0 auto; position:relative; z-index:3; }
+  .tag{ font-size:36px; font-weight:700; letter-spacing:.2em; color:var(--acc); }
+  .pno{ font-size:36px; font-weight:600; letter-spacing:.12em; color:var(--dim); }
+
+  .main{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column;
+         justify-content:center; position:relative; z-index:2; padding:12px 0 8px; }
+  .ft{ flex:0 0 auto; position:relative; z-index:3; display:flex;
+       justify-content:space-between; align-items:baseline;
+       font-size:36px; color:var(--dim); letter-spacing:.04em; }
+
+  /* ── 電鍋插畫（照風格樣本） ── */
+  .art{ position:absolute; z-index:1; pointer-events:none; }
+  .art.big{ right:56px; bottom:110px; width:540px; }   /* 2026-11-23 往上收，不碰頁尾的字 */
+  .art.mid{ right:52px; bottom:110px; width:400px; }
+  .art.wm{ right:20px; bottom:4px; width:640px; opacity:.24; }
+  .art svg{ width:100%; height:auto; display:block; }
+  .art .steam{ animation:steam 4s ease-in-out infinite; }
+  @keyframes steam{ 0%,100%{opacity:.15; transform:translateY(8px);} 50%{opacity:.5; transform:translateY(-8px);} }
+
+  /* ── 文字 ── */
+  h1.t{ font-size:72px; line-height:1.14; font-weight:900; letter-spacing:-.02em; margin:0; }
+  .hero{ font-size:136px; line-height:1; font-weight:900; letter-spacing:-.03em; margin:0; white-space:nowrap; }   /* 2026-11-23 一行；名字長就由下面的小程式縮小，不壓到右邊的圖 */
+  .hero span,.mark{ color:var(--acc); }
+  .who{ font-size:46px; line-height:1.5; font-weight:500; color:var(--dim); margin:0; max-width:900px; }
+  .why{ font-size:46px; line-height:1.55; margin:0; max-width:900px; }
+  .hl{ color:var(--acc); font-weight:700; }
+  .lbl{ font-size:36px; font-weight:700; color:var(--acc); letter-spacing:.14em; margin:0; }
+  .note{ font-size:38px; line-height:1.5; color:var(--dim); margin:0; }
+  .quote{ font-size:58px; line-height:1.45; font-weight:700; letter-spacing:-.01em; margin:0; }
+  .quote.sm{ font-size:46px; line-height:1.5; font-weight:600; }
+  .div{ height:2px; background:rgba(255,255,255,.16); margin:34px 0; }
+
+  /* ── 分鏡板 ── */
+  .board{ display:grid; gap:18px; }
+  .board.row4{ grid-template-columns:repeat(4,1fr); }
+  .board.col2{ grid-template-columns:repeat(2,1fr); gap:14px; }
+  .panel{
+    position:relative; box-sizing:border-box; background:var(--panel);
+    border:2px solid var(--edge); border-radius:6px; padding:10px 10px 12px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:6px;
+  }
+  .panel .pn{ position:absolute; top:6px; left:14px; font-size:36px; line-height:1;
+              color:var(--acc); font-weight:800; }
+  .panel svg{ width:46px; height:46px; color:var(--dim); flex:0 0 auto; }
+  .panel .pl{ font-size:36px; line-height:1.3; margin:0; text-align:center; color:#fff; }
+
+  .dim .panel{ opacity:.35; transition:opacity .4s ease; }
+  .dim .panel.lit{ opacity:1; border-color:var(--acc); }
+
+  .stamp{
+    position:absolute; right:10px; top:10px; transform:rotate(-8deg);   /* 印章收進格子裡，不壓格子的框 */
+    border:3px solid var(--acc); color:var(--acc); background:rgba(5,8,10,.94);
+    font-size:36px; font-weight:900; letter-spacing:.1em; padding:0 10px 2px;
+    line-height:1.25; white-space:nowrap;
+  }
+
+  /* ── 三輪角色 ── */
+  .roles{ display:grid; grid-template-columns:repeat(3,1fr); gap:34px; }
+  .role{ display:flex; flex-direction:column; gap:6px;
+         border-left:2px solid rgba(255,255,255,.14); padding-left:18px; }
+  .role .rn{ font-size:38px; font-weight:900; color:var(--acc); letter-spacing:.08em; margin:0; }
+  .role .rt{ font-size:36px; line-height:1.34; font-weight:600; margin:0; }
+  .role .re{ font-size:36px; line-height:1.34; color:var(--dim); margin:0; }
+
+  /* ── 三句聚攏 ── */
+  .cluster{ display:flex; flex-wrap:wrap; gap:16px 20px; align-items:center; }
+  .chip{ font-size:36px; font-weight:700; line-height:1.4; color:#fff;
+         border:2px solid var(--edge); background:var(--panel); padding:10px 18px; }
+  .chip.hot{ border-color:var(--acc); }
+  .down{ font-size:44px; line-height:1; color:var(--acc); margin:14px 0 16px; }
+  .insight{ font-size:76px; line-height:1.32; font-weight:900; letter-spacing:-.02em; margin:0; }
+  .hmw{ font-size:40px; line-height:1.55; margin:0; max-width:1340px; }
+  .hmw .u{ border-bottom:4px solid var(--acc); }
+
+  /* ── 兩欄 ── */
+  .split{ display:grid; grid-template-columns:430px 1fr; gap:56px; align-items:start; }
+  .two{ display:grid; grid-template-columns:1fr 1fr; gap:52px; }
+  .k{ font-size:36px; font-weight:700; color:var(--acc); letter-spacing:.12em; margin:0 0 8px; }
+  .v{ font-size:36px; line-height:1.5; margin:0; }
+  .v.big{ font-size:42px; font-weight:800; }
+  .next{ border-top:2px solid rgba(255,255,255,.16); padding-top:14px; }
+</style>
+</head>
+<body>
+<div class="reveal"><div class="slides">
+
+  <!-- 1 -->
+  <section class="pg">
+    <div class="frame"></div>
+    <div class="hd">
+      <div class="tag">01　起點</div>
+      <div class="pno">1 / 7</div>
+    </div>
+
+    <div class="art big fragment" data-fragment-index="0">
+      <svg viewBox="0 0 200 200" fill="none" stroke="#1B252B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <path class="steam" d="M78 36c0-8 8-9 8-17" stroke="#2A363D" stroke-width="6"/>
+        <path class="steam" d="M112 32c0-8 8-9 8-17" stroke="#2A363D" stroke-width="6"/>
+        <path fill="#141C21" stroke="none" d="M34 72h132l-7 84a18 18 0 0 1-18 16H59a18 18 0 0 1-18-16z"/>
+        <rect fill="#141C21" stroke="none" x="36" y="54" width="128" height="20" rx="10"/>
+        <rect fill="#141C21" stroke="none" x="92" y="38" width="16" height="16" rx="5"/>
+        <rect x="68" y="122" width="64" height="18" rx="9" stroke="#3A474E"/>
+      </svg>
+    </div>
+
+    <div class="main">
+      <div class="copy">
+        <p class="who fragment" data-fragment-index="1">我是地表最強那間 AI 公司<br>前瞻應用中心的主管。</p>
+        <div class="fragment" data-fragment-index="2" style="margin-top:34px;">
+          <h1 class="hero">我選了<span>電鍋</span></h1>
+          <p class="why" style="margin-top:26px;">家家都有、天天煮晚餐，<br>而且<span class="hl">只有一個開關</span>。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="ft"><span>I3840 人機互動　W10</span><span>2026.11.30</span></div>
+    <aside class="notes">
+      這一頁 25 秒。順序：先出電鍋，再出身分，最後出「只有一個開關」。
+      為什麼是這台：家家都有、天天煮晚餐、只有一個開關，不是任何家電都能套的一句話。
+    </aside>
+  </section>
+
+  <!-- 2 -->
+  <section class="pg">
+    <div class="frame"></div>
+    <div class="art mid">
+      <svg viewBox="0 0 200 200" fill="none" stroke="#1B252B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <path class="steam" d="M78 36c0-8 8-9 8-17" stroke="#2A363D" stroke-width="6"/>
+        <path class="steam" d="M112 32c0-8 8-9 8-17" stroke="#2A363D" stroke-width="6"/>
+        <path fill="#141C21" stroke="none" d="M34 72h132l-7 84a18 18 0 0 1-18 16H59a18 18 0 0 1-18-16z"/>
+        <rect fill="#141C21" stroke="none" x="36" y="54" width="128" height="20" rx="10"/>
+        <rect fill="#141C21" stroke="none" x="92" y="38" width="16" height="16" rx="5"/>
+        <rect x="68" y="122" width="64" height="18" rx="9" stroke="#3A474E"/>
+      </svg>
+    </div>
+    <div class="hd">
+      <div class="tag">02　去問（第一輪）</div>
+      <div class="pno">2 / 7</div>
+    </div>
+
+    <div class="main">
+      <div class="fragment" data-fragment-index="0">
+        <p class="lbl">我原本以為</p>
+        <p class="quote sm" style="margin-top:14px;">她最在意的是快、不想等。</p>
+      </div>
+
+      <div class="div"></div>
+
+      <div class="fragment" data-fragment-index="1">
+        <p class="lbl">小安說</p>
+        <p class="quote" style="margin-top:16px;">「我煮飯常常忘記外鍋要放幾杯水，<br>每次都要上網查。」</p>
+      </div>
+    </div>
+
+    <div class="ft"><span>去問　AI 扮的小安</span><span>W7 島上</span></div>
+    <aside class="notes">
+      這一輪還沒被推翻，所以「我原本以為」不劃掉。
+      原話出處：材料/上台被問的兩題.md；發表手冊.md 第二部分第 2 頁。
+    </aside>
+  </section>
+
+  <!-- 3 -->
+  <section class="pg">
+    <div class="frame"></div>
+    <div class="art wm">
+      <svg viewBox="0 0 200 200" fill="none" stroke="#1B252B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <path class="steam" d="M78 36c0-8 8-9 8-17" stroke="#2A363D" stroke-width="6"/>
+        <path class="steam" d="M112 32c0-8 8-9 8-17" stroke="#2A363D" stroke-width="6"/>
+        <path fill="#141C21" stroke="none" d="M34 72h132l-7 84a18 18 0 0 1-18 16H59a18 18 0 0 1-18-16z"/>
+        <rect fill="#141C21" stroke="none" x="36" y="54" width="128" height="20" rx="10"/>
+        <rect fill="#141C21" stroke="none" x="92" y="38" width="16" height="16" rx="5"/>
+        <rect x="68" y="122" width="64" height="18" rx="9" stroke="#3A474E"/>
+      </svg>
+    </div>
+    <div class="hd">
+      <div class="tag">03　去問、給他用（第二輪）</div>
+      <div class="pno">3 / 7</div>
+    </div>
+
+    <div class="main">
+      <h1 class="t">一位同學推翻了我什麼</h1>
+
+      <div class="fragment" data-fragment-index="0" style="margin-top:20px;">
+        <p class="lbl">我帶去的分鏡</p>
+        <div class="board row4" style="margin-top:14px;">
+          <div class="panel" style="min-height:176px;">
+            <span class="pn">1</span>
+            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 28h40l-3 22a6 6 0 0 1-6 5H21a6 6 0 0 1-6-5z"/>
+              <rect x="14" y="20" width="36" height="8" rx="4"/><path d="M32 20v-6"/>
+            </svg>
+            <p class="pl">飯煮好了</p>
+          </div>
+          <div class="panel" style="min-height:176px;">
+            <span class="pn">2</span>
+            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 32c8-12 16-18 24-18s16 6 24 18c-8 12-16 18-24 18S16 44 8 32z"/>
+              <circle cx="32" cy="32" r="6"/>
+            </svg>
+            <p class="pl">AI 知道飯好了</p>
+          </div>
+          <div class="panel" style="min-height:176px;">
+            <span class="pn">3</span>
+            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="18" y="6" width="28" height="52" rx="6"/>
+              <path d="M26 46h12"/>
+            </svg>
+            <p class="pl">傳訊息到她手機</p>
+            <div class="stamp fragment" data-fragment-index="2">推翻</div>
+          </div>
+          <div class="panel" style="min-height:176px;">
+            <span class="pn">4</span>
+            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="32" cy="22" r="9"/>
+              <path d="M14 54c2-10 9-15 18-15s16 5 18 15"/>
+            </svg>
+            <p class="pl">她看到訊息</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="fragment" data-fragment-index="1" style="margin-top:26px;">
+        <p class="lbl">同學說</p>
+        <p class="quote sm" style="margin-top:12px; font-size:40px;">「飯好了傳訊息給我有什麼用，我還要用同一個鍋蒸水餃，<br>等水餃好了飯都冷了。」</p>
+      </div>
+
+      <p class="fragment" data-fragment-index="3" style="font-size:40px; line-height:1.5; margin:24px 0 0; font-weight:700;">
+        被推翻的：<span class="mark">飯熟了，不等於可以吃了。</span>
+      </p>
+    </div>
+
+    <div class="ft"><span>去問、給他用　一位同學</span><span>W8</span></div>
+    <aside class="notes">
+      原話出處：發表手冊.md 第二部分第 3 頁。
+      「推翻」蓋在第 3 格「傳訊息」上。W8 研究員手冊沒有放進 材料/，這一頁是照第二部分寫的。
+    </aside>
+  </section>
+
+  <!-- 4 -->
+  <section class="pg">
+    <div class="frame"></div>
+    <div class="art wm">
+      <svg viewBox="0 0 200 200" fill="none" stroke="#1B252B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <path class="steam" d="M78 36c0-8 8-9 8-17" stroke="#2A363D" stroke-width="6"/>
+        <path class="steam" d="M112 32c0-8 8-9 8-17" stroke="#2A363D" stroke-width="6"/>
+        <path fill="#141C21" stroke="none" d="M34 72h132l-7 84a18 18 0 0 1-18 16H59a18 18 0 0 1-18-16z"/>
+        <rect fill="#141C21" stroke="none" x="36" y="54" width="128" height="20" rx="10"/>
+        <rect fill="#141C21" stroke="none" x="92" y="38" width="16" height="16" rx="5"/>
+        <rect x="68" y="122" width="64" height="18" rx="9" stroke="#3A474E"/>
+      </svg>
+    </div>
+    <div class="hd">
+      <div class="tag">04　給他用（第三輪）</div>
+      <div class="pno">4 / 7</div>
+    </div>
+
+    <div class="main">
+      <div class="split">
+        <div>
+          <p class="lbl" style="margin-bottom:12px;">改過的四格分鏡</p>
+          <div class="board col2 dim">
+            <div class="panel fragment lit" data-fragment-index="1" style="min-height:148px;">
+              <span class="pn">1</span>
+              <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="32" cy="32" r="21"/><path d="M32 18v14l10 6"/>
+              </svg>
+              <p class="pl">她遇到麻煩</p>
+            </div>
+            <div class="panel fragment lit" data-fragment-index="1" style="min-height:148px;">
+              <span class="pn">2</span>
+              <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 32c8-12 16-18 24-18s16 6 24 18c-8 12-16 18-24 18S16 44 8 32z"/><circle cx="32" cy="32" r="6"/>
+              </svg>
+              <p class="pl">AI 注意到<br>什麼</p>
+            </div>
+            <div class="panel fragment lit" data-fragment-index="2" style="min-height:148px;">
+              <span class="pn">3</span>
+              <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10 14h44a4 4 0 0 1 4 4v22a4 4 0 0 1-4 4H28L16 54V44h-6a4 4 0 0 1-4-4V18a4 4 0 0 1 4-4z"/>
+              </svg>
+              <p class="pl">AI 做了<br>什麼</p>
+            </div>
+            <div class="panel fragment lit" data-fragment-index="3" style="min-height:148px;">
+              <span class="pn">4</span>
+              <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 40h48"/><path d="M16 40v10M48 40v10"/>
+                <circle cx="22" cy="30" r="6"/><circle cx="42" cy="30" r="6"/>
+              </svg>
+              <p class="pl">使用者<br>怎麼了</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="note" style="font-size:36px; color:var(--fg);">
+            傍晚六點，她在紙上寫了一個<span class="hl">「趕」</span>。
+          </p>
+
+          <div class="fragment" data-fragment-index="2" style="margin-top:26px;">
+            <p class="lbl">我替電鍋裡的 AI 說</p>
+            <p style="margin-top:8px; font-size:36px; line-height:1.5;">「飯和魚我顧，七點整一起好。青菜六點五十下鍋就來得及，到時候我叫你。」</p>
+          </div>
+
+          <div class="fragment" data-fragment-index="3" style="margin-top:26px;">
+            <p class="lbl">她的第一句</p>
+            <p class="quote" style="margin-top:8px; font-size:54px;">「你怎麼知道你爸七點到？」</p>
+          </div>
+        </div>
+      </div>
+
+      <p class="fragment" data-fragment-index="4" style="font-size:40px; line-height:1.5; margin:32px 0 0; border-top:2px solid var(--hair); padding-top:18px;">
+        差最多的一列：<span class="hl">我以為她要快，她要的是「大家一起吃熱的」。</span>
+      </p>
+    </div>
+
+    <div class="ft"><span>給他用　替 AI 開口</span><span>W9</span></div>
+    <aside class="notes">
+      原話出處：發表手冊.md 第二部分第 4 頁；材料/W9研究員手冊.md 第 4 步問題二。
+      動畫：四格一格一格亮，亮到第 3 格時出現我替 AI 說的話，亮到第 4 格時出現她的第一句。（第 4 頁「我替 AI 說」這一句 2026-11-23 由 TMCS 補回，AI 改字大小時刪掉了）
+      「趕」不單獨放大，放在她那句話裡。
+    </aside>
+  </section>
+
+  <!-- 5 -->
+  <section class="pg">
+    <div class="frame"></div>
+    <div class="art wm">
+      <svg viewBox="0 0 200 200" fill="none" stroke="#1B252B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <path class="steam" d="M78 36c0-8 8-9 8-17" stroke="#2A363D" stroke-width="6"/>
+        <path class="steam" d="M112 32c0-8 8-9 8-17" stroke="#2A363D" stroke-width="6"/>
+        <path fill="#141C21" stroke="none" d="M34 72h132l-7 84a18 18 0 0 1-18 16H59a18 18 0 0 1-18-16z"/>
+        <rect fill="#141C21" stroke="none" x="36" y="54" width="128" height="20" rx="10"/>
+        <rect fill="#141C21" stroke="none" x="92" y="38" width="16" height="16" rx="5"/>
+        <rect x="68" y="122" width="64" height="18" rx="9" stroke="#3A474E"/>
+      </svg>
+    </div>
+    <div class="hd">
+      <div class="tag">05　說清楚、想辦法</div>
+      <div class="pno">5 / 7</div>
+    </div>
+
+    <div class="main">
+      <div class="cluster">
+        <div class="chip fragment" data-fragment-index="0">小安：「每次都要上網查。」</div>
+        <div class="chip fragment" data-fragment-index="1">同學：「等水餃好了飯都冷了。」</div>
+        <div class="chip hot fragment" data-fragment-index="2">她：「趕。」</div>
+      </div>
+
+      <div class="down fragment" data-fragment-index="3">↓</div>
+
+      <div class="fragment" data-fragment-index="4">
+        <p class="lbl">洞見</p>
+        <p class="insight" style="margin-top:10px;">她做飯的節奏，<br>被家人進門的時間牽著走。</p>
+      </div>
+
+      <div class="fragment" data-fragment-index="5" style="margin-top:26px;">
+        <p class="lbl">我們可以怎麼</p>
+        <p class="hmw" style="margin-top:10px;">我們可以怎麼讓電鍋裡的菜什麼時候好、青菜什麼時候下、爸爸什麼時候進門自己對齊，<span class="u">她不用一直回頭看</span>？</p>
+      </div>
+    </div>
+
+    <div class="ft"><span>說清楚、想辦法</span><span>三輪放在一起看</span></div>
+    <aside class="notes">
+      洞見與「我們可以怎麼」出處：材料/W9研究員手冊.md 第 6 步；發表手冊.md 第二部分第 5 頁。
+      三句從三個角落聚到中間，收成洞見那一句。
+    </aside>
+  </section>
+
+  <!-- 6 -->
+  <section class="pg" data-auto-animate>
+    <div class="frame"></div>
+    <div class="art wm">
+      <svg viewBox="0 0 200 200" fill="none" stroke="#1B252B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <path class="steam" d="M78 36c0-8 8-9 8-17" stroke="#2A363D" stroke-width="6"/>
+        <path class="steam" d="M112 32c0-8 8-9 8-17" stroke="#2A363D" stroke-width="6"/>
+        <path fill="#141C21" stroke="none" d="M34 72h132l-7 84a18 18 0 0 1-18 16H59a18 18 0 0 1-18-16z"/>
+        <rect fill="#141C21" stroke="none" x="36" y="54" width="128" height="20" rx="10"/>
+        <rect fill="#141C21" stroke="none" x="92" y="38" width="16" height="16" rx="5"/>
+        <rect x="68" y="122" width="64" height="18" rx="9" stroke="#3A474E"/>
+      </svg>
+    </div>
+    <div class="hd">
+      <div class="tag">06　回頭看</div>
+      <div class="pno">6 / 7</div>
+    </div>
+
+    <div class="main">
+      <h1 class="t" style="margin-top:6px;">三輪下來，我會了什麼</h1>
+
+      <div class="roles" style="margin-top:14px;">
+        <div class="role fragment" data-fragment-index="0">
+          <div class="rn">夢想家</div>
+          <p class="rt">我會從一個人畫的一天裡最用力的一個字，問出她真正在意的事。</p>
+          <p class="re">證據：第三輪第 3 步，指著「趕」連問三次為什麼。</p>
+        </div>
+        <div class="role fragment" data-fragment-index="1">
+          <div class="rn">設計師</div>
+          <p class="rt">我會照一個人說的話，決定 AI 該對準什麼、不該教什麼。</p>
+          <p class="re">證據：第二輪，同學說「煮白飯我自己會」。</p>
+        </div>
+        <div class="role fragment" data-fragment-index="2">
+          <div class="rn">工匠</div>
+          <p class="rt">我能把一個還沒做出來的 AI，先做成別人讀得懂的樣子。</p>
+          <p class="re">證據：第一輪，主管報告第三段「有了 AI 之後的一天」。</p>
+        </div>
+      </div>
+
+      <div class="fragment" data-fragment-index="3" style="margin-top:16px;">
+        <p class="note" style="font-size:36px; margin-bottom:6px;">上一版四格分鏡</p>
+        <div class="board row4">
+          <div class="panel" data-id="p1" style="min-height:176px;">
+            <span class="pn">1</span>
+            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="32" cy="32" r="21"/><path d="M32 18v14l10 6"/>
+            </svg>
+            <p class="pl">她遇到麻煩</p>
+          </div>
+          <div class="panel" data-id="p2" style="min-height:176px;">
+            <span class="pn">2</span>
+            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 32c8-12 16-18 24-18s16 6 24 18c-8 12-16 18-24 18S16 44 8 32z"/><circle cx="32" cy="32" r="6"/>
+            </svg>
+            <p class="pl">從爸爸手機算出七點到</p>
+          </div>
+          <div class="panel" data-id="p3" style="min-height:176px;">
+            <span class="pn">3</span>
+            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 14h44a4 4 0 0 1 4 4v22a4 4 0 0 1-4 4H28L16 54V44h-6a4 4 0 0 1-4-4V18a4 4 0 0 1 4-4z"/>
+            </svg>
+            <p class="pl">AI 做了<br>什麼</p>
+          </div>
+          <div class="panel" data-id="p4" style="min-height:176px;">
+            <span class="pn">4</span>
+            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 40h48"/><path d="M16 40v10M48 40v10"/>
+              <circle cx="22" cy="30" r="6"/><circle cx="42" cy="30" r="6"/>
+            </svg>
+            <p class="pl">使用者<br>怎麼了</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ft"><span>回頭看　三輪</span><span>6 / 7</span></div>
+    <aside class="notes">
+      三個證據來自不同的輪：夢想家第三輪、設計師第二輪、工匠第一輪。
+      出處：材料/W9研究員手冊.md 最後一頁「三輪回頭看」；發表手冊.md 第二部分第 6 頁。
+      W7 設計開發報告不在 材料/，工匠那一列是照 W9 手冊與第二部分回頭寫的。
+    </aside>
+  </section>
+
+  <!-- 7 -->
+  <section class="pg" data-auto-animate>
+    <div class="frame"></div>
+    <div class="art wm">
+      <svg viewBox="0 0 200 200" fill="none" stroke="#1B252B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <path class="steam" d="M78 36c0-8 8-9 8-17" stroke="#2A363D" stroke-width="6"/>
+        <path class="steam" d="M112 32c0-8 8-9 8-17" stroke="#2A363D" stroke-width="6"/>
+        <path fill="#141C21" stroke="none" d="M34 72h132l-7 84a18 18 0 0 1-18 16H59a18 18 0 0 1-18-16z"/>
+        <rect fill="#141C21" stroke="none" x="36" y="54" width="128" height="20" rx="10"/>
+        <rect fill="#141C21" stroke="none" x="92" y="38" width="16" height="16" rx="5"/>
+        <rect x="68" y="122" width="64" height="18" rx="9" stroke="#3A474E"/>
+      </svg>
+    </div>
+    <div class="hd">
+      <div class="tag">07　回頭修改</div>
+      <div class="pno">7 / 7</div>
+    </div>
+
+    <div class="main">
+      <h1 class="t">我改了第 <span class="mark">2</span> 格</h1>
+
+      <div class="board row4" style="margin-top:20px;">
+        <div class="panel" data-id="p1" style="min-height:176px;">
+          <span class="pn">1</span>
+          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="32" cy="32" r="21"/><path d="M32 18v14l10 6"/>
+          </svg>
+          <p class="pl">她遇到麻煩</p>
+        </div>
+        <div class="panel" data-id="p2" style="min-height:176px; border-color:var(--acc); border-width:3px; background:#1A0F0D;">
+          <span class="pn">2</span>
+          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 32c8-12 16-18 24-18s16 6 24 18c-8 12-16 18-24 18S16 44 8 32z"/><circle cx="32" cy="32" r="6"/>
+          </svg>
+          <p class="pl">先問爸爸，再自己算</p>
+        </div>
+        <div class="panel" data-id="p3" style="min-height:176px;">
+          <span class="pn">3</span>
+          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 14h44a4 4 0 0 1 4 4v22a4 4 0 0 1-4 4H28L16 54V44h-6a4 4 0 0 1-4-4V18a4 4 0 0 1 4-4z"/>
+          </svg>
+          <p class="pl">AI 做了<br>什麼</p>
+        </div>
+        <div class="panel" data-id="p4" style="min-height:176px;">
+          <span class="pn">4</span>
+          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 40h48"/><path d="M16 40v10M48 40v10"/>
+            <circle cx="22" cy="30" r="6"/><circle cx="42" cy="30" r="6"/>
+          </svg>
+          <p class="pl">使用者<br>怎麼了</p>
+        </div>
+      </div>
+
+      <div class="two" style="margin-top:24px;">
+        <div>
+          <p class="k">原本</p>
+          <p class="v" style="color:var(--dim);">AI 從爸爸手機的位置，算出他七點到。</p>
+          <p class="k" style="margin-top:14px;">改成</p>
+          <p class="v">先問爸爸；他同意了，AI 從他每天真的幾點進門學起，加上他當天傳的訊息，自己算出今天幾點到。</p>
+        </div>
+        <div>
+          <p class="k">為什麼</p>
+          <p class="v">她在第 2 格打了問號，說「要先問他」；又說爸爸「每次說七點到，常常七點半才進門」。</p>
+          <div class="next fragment" data-fragment-index="0" style="margin-top:18px;">
+            <p class="k">主管的下一步</p>
+            <p class="v big">下一輪，先去見爸爸。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ft"><span>回頭修改　第 2 格</span><span>7 / 7</span></div>
+    <aside class="notes">
+      出處：發表手冊.md 第二部分第 7 頁；材料/W9研究員手冊.md 第 7 步問題一、問題二；材料/上台被問的兩題.md 第二題。
+      動畫：第 6 頁結束時四格分鏡還在畫面上；翻到第 7 頁，只有第 2 格變形，其他三格不動。
+    </aside>
+  </section>
+
+</div></div>
+<script src="../../reveal/dist/reveal.js"></script>
+<script src="../../reveal/dist/plugin/notes.js"></script>
+<script>
+  Reveal.initialize({
+    width:1600, height:900, margin:0, hash:true,
+    center:false, controls:false, progress:false,
+    transition:'fade', transitionSpeed:'fast',
+    autoAnimateDuration:0.9, autoAnimateEasing:'cubic-bezier(.6,.05,.2,1)',
+    plugins:[RevealNotes]
+  });
+</script>
+<script>
+  // 大標一行碰到右邊的圖就縮小字，最小 72（1280 寬的視窗上約 58 像素）。名字長（例如「烤麵包機」）也不會壓到圖
+  (function () {
+    function 塞大標() {
+      var 頁 = Reveal.getCurrentSlide(); if (!頁) return;
+      var h = 頁.querySelector('.hero'), 圖 = 頁.querySelector('.art'); if (!h || !圖) return;
+      var 比 = Reveal.getScale(), f = 136; h.style.fontSize = f + 'px';
+      var 字 = document.createRange(); 字.selectNodeContents(h);
+      while (f > 72 && 字.getBoundingClientRect().right > 圖.getBoundingClientRect().left - 24 * 比) { f -= 4; h.style.fontSize = f + 'px'; }
+    }
+    Reveal.on('ready', 塞大標); Reveal.on('slidechanged', 塞大標); Reveal.on('resize', 塞大標);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(塞大標);
+  })();
+</script>
+</body>
+</html>
