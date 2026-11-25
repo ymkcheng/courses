@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>三張畫完的樣子</title>
+<!-- 2026-11-17 Kevin：「時間軸範例只要有圖不要寫字這頁才不會破梗」：紙上不寫站名、年代、年份，只畫小圖和線。
+     G4460 W9：學生動筆前先看三張畫完的樣子（Kevin 2026-11-17「有關在A4紙上怎麼畫，我們可以提供範例，主要提醒要有時間軸」，同日「做三張範例 但合在同一張」）。
+     三張都是 16 站加 2022、2026、2030、2036，都有一條時間軸，排法各不一樣（一條直線從頭到尾不轉彎、來回蛇行、一圈一圈），讓學生看到「一定要有時間軸，怎麼排自己決定」。
+     畫風像學生手畫（線條抖一點、手寫字），不做成精緻成品。照影片的順序排、只在影片講了年代的那幾站標年代（不照年代重排，那是 AI 同學那一張才拿出來比的）。
+     2022 以後只畫框和年份，2036 留「取名」的空格，不替學生想點子。大地圖第一站「先看畫完的樣子」按鈕疊上來（範例疊上.js）。 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; background: #d9d4c7; }
+  body { display: grid; place-items: center; font-family: "LXGW WenKai TC", "PingFang TC", serif; }
+  svg { width: min(98vw, calc(98vh * 1.78)); height: auto; display: block; }
+  text { font-family: "LXGW WenKai TC", serif; fill: #2b2b2b; }
+  .line { fill: none; stroke: #2b2b2b; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .fut { fill: none; stroke: #2b2b2b; stroke-width: 2.4; stroke-dasharray: 7 6; }
+  .dot { fill: #fbfaf5; stroke: #2b2b2b; stroke-width: 2.2; }
+</style>
+</head>
+<body>
+<svg id="s" viewBox="0 0 1600 700" xmlns="http://www.w3.org/2000/svg" aria-label="三張畫完的樣子">
+  <defs>
+    <filter id="hand" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="3"/>
+      <feDisplacementMap in="SourceGraphic" scale="2.6"/>
+    </filter>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10" fill="none" stroke="#2b2b2b" stroke-width="1.8"/>
+    </marker>
+  </defs>
+  <text x="800" y="58" text-anchor="middle" style="font-size:42px;font-weight:700">一定要有一條時間軸，怎麼排你自己決定</text>
+  <text x="800" y="98" text-anchor="middle" style="font-size:24px;fill:#555">影片的每一站都在那條線上，一路接到 2036</text>
+  <g id="cards"></g>
+</svg>
+<script>
+const NS = "http://www.w3.org/2000/svg";
+const el = (t, a = {}, p) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; };
+const tx = (g, x, y, str, size, extra = {}) => { const t = el("text", Object.assign({ x, y, "text-anchor": "middle", style: `font-size:${size}px` }, extra), g); t.textContent = str; return t; };
+// 照影片的順序；年代只標影片講過的
+const ST = [["洞熊", "4.3萬年前"], ["長毛象", ""], ["兀鷲", ""], ["骨笛", ""], ["山頂洞人", "4萬年前"], ["電腦", ""], ["管風琴", "2千年前"], ["鋼琴", ""],
+            ["打字機", "1850"], ["音樂盒", "1千年前"], ["自動機", ""], ["吹笛機器人", "1750"], ["織布機", ""], ["打孔卡", ""], ["分析機", ""], ["球、骰子", ""]];
+const FUT = ["2022", "2026", "2030", "2036"];
+const W = 500, H = 354, xs = [25, 550, 1075], y0 = 140;
+const 名 = ["一條直線", "來回蛇行", "一圈一圈"];
+const cards = document.getElementById("cards");
+function paper(i) {
+  const g = el("g", { transform: `translate(${xs[i]} ${y0})` }, cards);
+  el("rect", { x: 7, y: 9, width: W, height: H, fill: "rgba(0,0,0,.12)" }, g);
+  el("rect", { width: W, height: H, fill: "#fbfaf5", stroke: "#bbb", "stroke-width": 1 }, g);
+  tx(g, W / 2, H + 56, 名[i], 34, { style: "font-size:34px;font-weight:700" });
+  return el("g", { filter: "url(#hand)" }, g);
+}
+const DOODLE = [
+  (g, x, y) => el("path", { d: `M${x-9} ${y} C ${x-9} ${y-8} ${x+9} ${y-8} ${x+9} ${y} M${x-5} ${y} V${y+6} M${x+5} ${y} V${y+6}`, class: "line", style: "stroke-width:2" }, g),
+  (g, x, y) => el("path", { d: `M${x-10} ${y+5} L${x} ${y-8} L${x+10} ${y+5} Z`, class: "line", style: "stroke-width:2" }, g),
+  (g, x, y) => el("path", { d: `M${x-10} ${y} q5 -8 10 0 t10 0`, class: "line", style: "stroke-width:2" }, g),
+  (g, x, y) => el("rect", { x: x - 8, y: y - 6, width: 16, height: 12, class: "line", style: "stroke-width:2" }, g),
+  (g, x, y) => el("path", { d: `M${x-9} ${y+5} H${x+9} M${x-6} ${y+5} V${y-7} M${x} ${y+5} V${y-9} M${x+6} ${y+5} V${y-6}`, class: "line", style: "stroke-width:2" }, g),
+  (g, x, y) => el("circle", { cx: x, cy: y, r: 7, class: "line", style: "stroke-width:2" }, g),
+];
+function dot(g, x, y, n) { el("circle", { cx: x, cy: y, r: 5, class: "dot" }, g); }
+function doodle(g, x, y, i) { DOODLE[i % DOODLE.length](g, x, y); }
+function future(g, x, y, yr, w, h) {
+  el("rect", { x: x - w / 2, y: y - h / 2, width: w, height: h, class: "fut", rx: 3 }, g);
+  doodle(g, x, y, Number(yr) % 6);
+}
+function cut(g, x, y) {
+  el("path", { d: `M${x} ${y - 24} V${y + 24}`, stroke: "#2f5fb3", "stroke-width": 2, "stroke-dasharray": "3 4", fill: "none" }, g);
+}
+
+// 一、一條直線：從頭到尾只有一條線。十六站排在左邊，剪斷的記號之後，2022 以後四格接在同一條線的右邊
+// （2026-11-18 Kevin：原本影片之後的虛線往下折再往回拉，「感覺跟中間那個很像就是來回的」，要做個區隔）
+(() => {
+  const g = paper(0), y = 180, x1 = 16, step = 19;
+  el("path", { d: `M${x1} ${y} H${488}`, class: "line", "marker-end": "url(#arr)" }, g);
+  ST.forEach(([lab, yr], i) => {
+    const x = x1 + 12 + i * step; dot(g, x, y, i + 1);
+    doodle(g, x, y + (i % 2 ? 26 : -24), i);
+  });
+  const ex = x1 + 12 + 15 * step + 16; cut(g, ex, y);
+  FUT.forEach((yr, i) => future(g, ex + 24 + i * 36, y, yr, 22, 30));
+})();
+
+// 二、來回蛇行：三列，第一列往右、第二列往左、第三列往右接 2022 以後
+(() => {
+  const g = paper(1), rows = [80, 185, 290], L = 45, R = 455;
+  el("path", { d: `M${L} ${rows[0]} H${R} C ${R + 34} ${rows[0]} ${R + 34} ${rows[1]} ${R} ${rows[1]} H${L} C ${L - 34} ${rows[1]} ${L - 34} ${rows[2]} ${L} ${rows[2]} H${R}`, class: "line", "marker-end": "url(#arr)" }, g);
+  const per = [6, 6, 4]; let k = 0;
+  per.forEach((n, r) => {
+    for (let j = 0; j < n; j++) {
+      const t = (j + 0.5) / 6, x = r === 1 ? R - t * (R - L) : L + t * (R - L);
+      dot(g, x, rows[r], k + 1);
+      doodle(g, x, rows[r] - 24, k);
+      k++;
+    }
+  });
+  cut(g, L + (4 / 6) * (R - L) - 4, rows[2]);
+  FUT.forEach((yr, i) => future(g, 330 + i * 38, rows[2] - 34, yr, 32, 26));
+})();
+
+// 三、一圈一圈：從中間往外繞，照線的長度平均放站，2022 以後在最外圈
+(() => {
+  const g = paper(2), cx = 250, cy = 180, pts = [];
+  for (let i = 0; i <= 600; i++) { const a = i / 600 * Math.PI * 4.4, r = 18 + i * 0.27; pts.push([cx + r * 1.25 * Math.cos(a), cy + r * 0.9 * Math.sin(a)]); }
+  el("path", { d: "M" + pts.map(p => p.map(v => v.toFixed(1)).join(" ")).join(" L"), class: "line", "marker-end": "url(#arr)" }, g);
+  const len = [0]; for (let i = 1; i < pts.length; i++) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const at = d => { let i = len.findIndex(v => v >= d); return pts[Math.max(0, i)]; };
+  const total = len[len.length - 1], a0 = total * 0.10, a1 = total * 0.78;
+  ST.forEach(([lab, yr], i) => {
+    const p = at(a0 + (a1 - a0) * i / 15); dot(g, p[0], p[1], i + 1);
+    const out = Math.sign(p[1] - cy) || 1;
+    doodle(g, p[0], p[1] + (out > 0 ? 22 : -20), i);
+  });
+  const c = at(a1 + total * 0.025); cut(g, c[0], c[1]);
+  FUT.forEach((yr, i) => { const p = at(total * (0.84 + i * 0.045)); future(g, p[0], p[1], yr, 34, 26); });
+})();
+</script>
+</body>
+</html>

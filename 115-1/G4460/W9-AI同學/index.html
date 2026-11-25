@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>坐在你旁邊的 AI 同學</title>
+<!-- G4460 W9：坐在你旁邊的 AI 同學（Kevin 2026-11-15 的想法，「可以，做完整的」）。
+     學生畫完 2036 之後，老師問「要不要看一下坐在你旁邊的那位 AI 同學，他剛剛畫了什麼？」。
+     內容照 內容.md（v0.1）；AI 同學跟學生同樣的規矩：十六站只寫影片裡有的東西，2022 起用強森結尾的方法往後推，2036 取名字。
+     每一站：中間放大畫、寫兩題的答案，同時在 A4 上自己的位置畫小的；音符照年代由左往右排，編號照影片。
+     動畫用 GSAP 3.15（跟雨天大地圖同一份 lib），線條一筆一筆畫出來用 strokeDashoffset。
+     圖全部自己畫，不截影片畫面（TED 授權 CC BY-NC-ND 不准改作）。
+     操作：打開就自動一站一站畫（2026-11-18 Kevin：「打開來之後就慢慢地自動播放就好，就感覺他好像即時的在寫，不用我一直按空白鍵」），
+     用 AI 自己的速度畫（2.5 倍速，每站停半秒多，約 45 秒畫完），最後整張留在畫面上；空白鍵或點一下＝暫停／繼續；→、Enter＝直接下一步；←＝上一步；0＝收起大卡片看整張。
+     大地圖上收起來（Esc）會送「暫停」進來，再打開送「繼續」。 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root { --desk: #d9d4c7; --paper: #fbfaf5; --grid: #e6e9ee; --pencil: #2b2b2b; --pen: #2f5fb3; --red: #c0392b; }
+  html, body { margin: 0; height: 100%; background: var(--desk); overflow: hidden; }
+  body { display: grid; place-items: center; font-family: "LXGW WenKai TC", "PingFang TC", serif; color: var(--pencil); }
+  #wrap { position: relative; width: min(97vw, calc(97vh * 1.4147)); aspect-ratio: 1600 / 1131; }
+  #a4 { position: absolute; inset: 0; width: 100%; height: 100%; display: block; filter: drop-shadow(0 8px 18px rgba(0,0,0,.18)); }
+  .ink { fill: none; stroke: var(--pencil); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .pen { fill: none; stroke: var(--pen); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+  .redl { fill: none; stroke: var(--red); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .link { fill: none; stroke: #b9bec6; stroke-width: 1.6; stroke-dasharray: 3 6; }
+  .staff line { stroke: #9aa0a8; stroke-width: 2; }
+  svg text { fill: var(--pencil); font-family: "LXGW WenKai TC", serif; }
+  .t-big { font-size: 40px; font-weight: 700; }
+  .t-mid { font-size: 26px; }
+  .t-lab { font-size: 21px; font-weight: 700; }
+  .t-sm { font-size: 18px; fill: #666; }
+  .t-pen { fill: var(--pen); }
+  /* 大卡片：每一站先在這裡放大畫 */
+  #card { position: absolute; top: 15%; width: 47%; height: 70%; box-sizing: border-box; padding: 2.2% 2.6%;
+    background: #fffef9; border: 2px solid #3b3b3b; border-radius: 6px; box-shadow: 10px 12px 0 rgba(0,0,0,.12);
+    display: flex; flex-direction: column; opacity: 0; pointer-events: none; }
+  #card.left { left: 2.5%; } #card.right { right: 2.5%; }
+  #card .no { font-size: clamp(18px, 2.6vw, 44px); font-weight: 700; line-height: 1.1; }
+  #card .no small { font-size: .55em; font-weight: 400; color: #666; margin-left: .6em; }
+  #card svg { width: 100%; height: 34%; margin: 1% 0 2%; }
+  #card .qa { font-size: clamp(12px, 1.55vw, 27px); line-height: 1.45; margin: .35em 0; }
+  #card .qa b { display: inline-block; font-size: .78em; color: #fff; background: #3b3b3b; border-radius: 3px; padding: .05em .45em; margin-right: .45em; transform: translateY(-.1em); }
+  #card .note { font-size: clamp(12px, 1.45vw, 25px); color: var(--pen); line-height: 1.45; margin-top: auto; }
+  #card.quote { justify-content: center; }
+  #card.quote .no { font-size: clamp(20px, 3vw, 52px); line-height: 1.5; }
+  .hint { position: fixed; left: 12px; bottom: 8px; font: 13px "PingFang TC", sans-serif; color: #555; opacity: .65; }
+</style>
+</head>
+<body>
+<div id="wrap">
+<svg id="a4" viewBox="0 0 1600 1131" xmlns="http://www.w3.org/2000/svg" aria-label="AI 同學畫的時間軸">
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="var(--grid)" stroke-width="1.2"/>
+    </pattern>
+  </defs>
+  <rect width="1600" height="1131" fill="var(--paper)"/>
+  <rect width="1600" height="1131" fill="url(#grid)"/>
+  <g id="head">
+    <text class="t-big" x="60" y="80">坐在你旁邊的 AI 同學</text>
+    <text class="t-sm" x="62" y="114">從四萬三千年前，畫到 2036</text>
+    <text class="t-mid t-pen" x="1540" y="78" text-anchor="end">我畫成五線譜，因為整場演講是從一支笛子開始的</text>
+    <text class="t-sm" x="1540" y="110" text-anchor="end">音符照年代由左往右排，編號照影片；空心音符是影片沒說哪一年</text>
+  </g>
+  <g id="staff" class="staff">
+    <line x1="60" y1="600" x2="1540" y2="600"/><line x1="60" y1="620" x2="1540" y2="620"/>
+    <line x1="60" y1="640" x2="1540" y2="640"/><line x1="60" y1="660" x2="1540" y2="660"/>
+    <line x1="60" y1="680" x2="1540" y2="680"/>
+  </g>
+  <g id="eras"></g>
+  <g id="cut">
+    <path class="pen" d="M1234 560 V720" stroke-dasharray="6 8"/>
+  </g>
+  <g id="items"></g>
+  <text id="quoteLine" class="t-mid t-pen" x="800" y="1100" text-anchor="middle">影片最後一句：「你會在大家玩得最開心的地方找到未來」</text>
+</svg>
+<div id="card" class="right"></div>
+</div>
+<div class="hint">空白鍵：暫停／繼續　→：下一步　←：上一步　0：看整張</div>
+
+<script src="../W9/lib/gsap.min.js"></script>
+<script>
+/* ---------- 線條圖（每一張畫在 200×120 的格子裡） ---------- */
+const C = (cx, cy, r) => `M${cx - r} ${cy} a${r} ${r} 0 1 0 ${2 * r} 0 a${r} ${r} 0 1 0 ${-2 * r} 0`;
+const ART = {
+  bear: { fade: ["M14 96 C8 70 24 52 48 46 C66 30 96 26 118 36 C128 30 140 30 146 38 C156 34 168 38 172 46 L190 54 C196 58 194 66 186 66 L172 66 C166 76 158 84 156 96 L156 116 L140 116 L138 98 C116 102 86 102 66 98 L64 116 L48 116 L44 96 C30 100 18 102 14 96 Z", "M150 38 C148 28 158 26 160 34", C(172, 50, 1.5)],
+          ink: ["M30 104 C70 92 120 92 158 98", "M62 100 C58 80 66 70 78 70 M84 98 C80 76 90 66 102 66 M106 97 C104 76 114 68 124 70 M128 98 C128 80 136 74 144 78",
+                "M158 98 C162 84 178 80 192 88 C198 94 196 104 184 106 C172 108 162 106 158 98 Z", "M24 110 L44 104 M36 112 L50 104"] },
+  mammoth: { ink: ["M40 95 C30 55 60 28 100 30 C140 32 158 52 160 72 L158 112 L145 112 L144 94 C120 99 92 99 72 96 L70 112 L56 112 L54 92 C47 96 42 98 40 95 Z",
+                   "M156 52 C180 58 186 86 176 110 C173 116 166 114 168 107", "M160 78 C172 98 192 92 196 74", "M60 40 C64 30 70 28 74 34 M80 34 C84 26 90 24 94 30"] },
+  birds: { ink: ["M18 78 C40 30 74 34 96 66 C118 34 152 30 182 78", "M96 66 C92 80 100 88 108 80 C112 74 104 66 96 66 Z", "M108 76 L120 72 L110 82"], pen: ["M150 24 C154 20 158 20 162 24 C166 20 170 20 174 24"] },
+  flute: { ink: ["M0 60 C4 48 16 46 26 52 L174 52 C184 46 196 50 200 60 C196 70 184 74 174 68 L26 68 C16 74 4 72 0 60 Z", C(80, 60, 5), C(105, 60, 5), C(130, 60, 5), C(155, 60, 5)],
+           pen: ["M150 14 C158 -4 182 -4 184 10 C186 22 170 24 170 36 M170 46 V48"] },
+  caveman: { ink: [C(60, 30, 12), "M60 42 L60 82 M60 54 L44 68 M60 54 L76 66 M60 82 L50 112 M60 82 L70 112", "M50 50 L70 76 M48 62 L66 82",
+                   "M122 112 C110 96 126 90 120 74 C136 88 142 100 132 112 Z", "M104 116 L146 108 M106 108 L144 116"],
+             pen: [C(176, 22, 12)] },
+  organ: { ink: [0, 1, 2, 3, 4, 5, 6, 7].map(i => { const x = 32 + i * 20, top = 18 + Math.abs(i - 3.5) * 9; return `M${x} ${top} V112 M${x + 10} ${top} V112 M${x} ${top} H${x + 10} M${x + 1} 92 L${x + 5} 86 L${x + 9} 92`; }) },
+  musicbox: { ink: ["M36 62 H156 V112 H36 Z", "M36 62 L58 18 H178 L156 62", "M56 74 H136 V96 H56 Z", "M66 74 V96 M126 74 V96"],
+              pen: [C(76, 85, 2), C(90, 80, 2), C(102, 90, 2), C(116, 82, 2)] },
+  automata: { ink: ["M128 16 C96 14 80 36 82 58 C74 64 76 72 84 74 L86 90 C88 100 100 104 114 100 L116 116", C(102, 44, 10), C(122, 62, 7)],
+              pen: ["M102 54 V116 M122 69 V116"] },
+  flutebot: { ink: ["M64 92 H136 V116 H64 Z", C(100, 26, 10), "M100 36 L100 92 M100 54 L124 46 M100 62 L118 50", "M84 46 L156 36"],
+              pen: ["M168 26 V6 L180 10 M168 26 C164 22 158 26 162 30 C166 33 170 30 168 26"] },
+  loom: { ink: ["M30 112 V18 H170 V112", "M60 18 V82 M75 18 V82 M90 18 V82 M105 18 V82 M120 18 V82 M135 18 V82", "M52 82 H148 V106 H52 Z", "M56 94 L66 86 L76 102 L86 86 L96 102 L106 86 L116 102 L126 86 L136 102 L144 92"] },
+  piano: { ink: ["M30 70 H172 C178 70 176 52 160 46 C130 36 92 42 62 30 C48 26 34 40 30 70 Z", "M38 70 V80 H166 V70", "M44 80 V112 M158 80 V112", "M62 30 L104 2"],
+           pen: ["M52 74 V80 M62 74 V80 M72 74 V80 M82 74 V80 M92 74 V80 M102 74 V80 M112 74 V80 M122 74 V80 M132 74 V80 M142 74 V80"] },
+  cards: { ink: ["M24 112 V12 H104 V112", "M24 50 H104 M44 12 V112 M84 12 V112"],
+           pen: ["M120 20 H186 V64 H120 Z", "M126 28 H192 V72 H126 Z", C(134, 38, 3), C(150, 46, 3), C(166, 38, 3), C(176, 52, 3)] },
+  engine: { ink: ["M70 26 H190 V104 H70 Z", C(90, 46, 8), C(112, 46, 8), C(134, 46, 8), C(156, 46, 8), C(90, 80, 8), C(112, 80, 8), C(134, 80, 8), C(156, 80, 8), "M70 112 H190"],
+            pen: [C(30, 28, 9), "M30 37 L22 112 H40 Z", "M38 60 H50 V74 H38"] },
+  typewriter: { ink: ["M30 64 H170 L182 112 H18 Z", "M60 64 V10 H140 V64", "M48 64 H152", C(50, 82, 4), C(70, 82, 4), C(90, 82, 4), C(110, 82, 4), C(130, 82, 4), C(150, 82, 4), C(60, 98, 4), C(80, 98, 4), C(100, 98, 4), C(120, 98, 4), C(140, 98, 4)],
+                pen: ["M72 30 H128"] },
+  arcade: { ink: ["M44 8 H156 V116 H44 Z", "M58 22 H142 V70 H58 Z", "M72 100 V88", C(72, 84, 5), C(100, 96, 4), C(116, 96, 4), C(132, 96, 4)],
+            pen: ["M76 58 L110 46 L126 49 L110 54 L86 62 Z", "M64 66 H136"] },
+  play: { ink: ["M12 40 H66 V84 H12 Z", "M20 74 L34 56 L46 70 L58 60", C(96, 70, 16), "M84 62 C92 70 100 60 108 72", "M124 54 H146 V76 H124 Z", "M150 70 H168 V88 H150 Z", "M164 44 L196 38 L200 82 L168 88 Z"],
+          pen: [C(130, 60, 1.5), C(140, 70, 1.5), C(159, 79, 1.5), "M174 56 L190 53"] },
+  chat: { ink: ["M30 64 H170 L182 112 H18 Z", "M60 64 V6 H140 V64"],
+          pen: ["M72 20 H128 M72 32 H118 M72 44 H124 M72 56 H104"] },
+  catapult: { ink: ["M24 108 H112", "M40 108 L68 80 L96 108", "M68 80 L104 34", C(110, 30, 7), "M136 108 L140 90 H156 L160 108 M140 90 L144 72 H156 L160 90 M146 72 L148 56 H154 L156 72"],
+              pen: ["M4 14 C4 -2 64 -2 64 14 C64 28 32 30 22 28 L12 38 L16 26 C8 22 4 18 4 14 Z"], txt: [[34, 19, "發射！"]] },
+  hum: { ink: [C(46, 40, 14), "M46 54 V100 M46 66 L30 82 M46 66 L70 74", "M78 76 L178 56", C(120, 68, 3), C(140, 64, 3), C(160, 60, 3)],
+         pen: ["M74 30 C80 24 86 24 90 30", "M156 30 V10 L168 14 M156 30 C152 26 146 30 150 34 C154 37 158 34 156 30", "M184 40 V24 L194 27 M184 40 C180 37 175 40 178 43 C181 46 186 43 184 40"] },
+  bench: { ink: ["M20 98 H196 M32 98 V118 M184 98 V118", "M140 98 V88 H170 V98 M155 88 L140 56 L172 36 M172 36 L182 46 M172 36 L180 28", "M50 98 V66 H96 V98 M56 76 H90", "M104 98 L130 82 M110 98 L116 74 L128 78"],
+           pen: [C(10, 64, 9), "M10 73 V100 M10 82 L24 76 M10 100 L4 118 M10 100 L16 118", "M24 34 C24 16 84 16 84 34 C84 50 46 52 36 50 L26 60 L30 48 C26 44 24 40 24 34 Z"], txt: [[54, 40, "咒語！"]] },
+};
+
+/* ---------- 二十個音符，照年代排（No. 照影片） ---------- */
+const Q2 = ["牠是什麼、大約哪一年", "牠留下了什麼"];
+const ITEMS = [
+  { no: "No.1", name: "洞熊", era: "約 43,000 年前", art: "bear", q: Q2, a: ["洞熊，大約四萬三千年前，死在現在斯洛維尼亞的山裡", "牠留下了骨頭"] },
+  { no: "No.2", name: "長毛象", era: "再過一千年", art: "mammoth", q: Q2, a: ["長毛象，又過了一千年，在德國南部", "也是骨頭"] },
+  { no: "No.3", name: "西域兀鷲", era: "再過幾個世紀", art: "birds", q: ["牠是什麼", "牠留下了什麼"], a: ["西域兀鷲，又過了幾個世紀，在附近", "骨頭。影片沒說是哪一根"] },
+  { no: "No.4", name: "骨笛", era: "四萬年前", art: "flute", q: ["它是用什麼做的", "它好玩在哪"], a: ["用動物的骨頭做的", "它什麼都不能幫你做，不能打獵、不能保暖，只會讓空氣震動，可是有人花力氣把它做出來"], note: "這裡影片在放音樂，我沒聽到，只讀到字幕寫「（音樂）」" },
+  { no: "No.5", name: "山頂洞人", era: "四萬年前", art: "caveman", q: ["他會做哪些事", "如果你是他，接下來會發明什麼"], a: ["會生火、做簡單的打獵工具、用獸皮做衣服保暖", "畫面是晚上。晚上很長，我大概也會想做一個能發出聲音的東西"] },
+  { no: "No.7", name: "管風琴", era: "兩千多年前", art: "organ", q: ["它叫什麼、大約哪一年", "它好玩在哪"], a: ["管風琴，兩千多年前", "吹笛子那一口氣交給機器，一排管子一起響"] },
+  { no: "No.10", name: "會自己演奏的樂器", era: "約一千年前", art: "musicbox", q: ["它叫什麼、大約哪一年", "它好玩在哪"], a: ["「會自己演奏的樂器」，大約一千年前，巴格達三兄弟做的", "換一個圓筒就換一首歌"] },
+  { no: "No.11", name: "自動機", era: "十八世紀", art: "automata", q: ["它叫什麼", "它在做什麼"], a: ["Automata，自動機，機器人最早的樣子", "頭裡的圓筒和線在拉它的動作"] },
+  { no: "No.12", name: "吹笛機器人", era: "十八世紀", art: "flutebot", q: ["它叫什麼、大約哪一年", "它好玩在哪"], a: ["會吹笛子的機器人，十八世紀，法國的沃康松做的", "擺在巴黎貴族的客廳給人看，沒有用，就是好看"], note: "笛子第二次出現了" },
+  { no: "No.13", name: "可以程式的織布機", era: "十八世紀", art: "loom", q: ["它叫什麼", "它好玩在哪"], a: ["第一台可以程式的織布機，沃康松想到的", "圓筒上的點本來代表音符，改成代表不同顏色的線，音樂變成花布"] },
+  { no: "No.8", name: "鋼琴", era: "？", hollow: true, art: "piano", q: ["它叫什麼", "它好玩在哪"], a: ["鋼琴。鍵盤從管風琴、翼琴、大鍵琴一路變成鋼琴", "手指按一下，就有一個聲音"], note: "影片沒說哪一年，我照「在打字機之前」放在這裡" },
+  { no: "No.14", name: "打孔卡織布機", era: "半世紀後", art: "cards", q: ["它叫什麼", "它好玩在哪"], a: ["打孔卡織布機，半世紀後，法國的查卡", "金屬圓筒換成有洞的紙，便宜，換一疊就換一種花樣"] },
+  { no: "No.15", name: "分析機", era: "？", hollow: true, art: "engine", q: ["它叫什麼", "它好玩在哪"], a: ["巴貝奇的分析機，史上第一台電腦", "打孔卡從織布跳到算數字"], note: "影片沒給年份。旁邊那位拿紅色書的女士，影片沒說是誰，我猜是愛達．勒芙蕾絲" },
+  { no: "No.9", name: "打字機", era: "十九世紀中", art: "typewriter", q: ["它叫什麼、大約哪一年", "它好玩在哪"], a: ["打字機，十九世紀中，原本叫「寫字大鍵琴」", "一樣是按鍵，按出來的不是聲音，是字"] },
+  { no: "No.6", name: "電腦", era: "？", hollow: true, art: "arcade", q: ["它是什麼", "它是為了什麼做出來的"], a: ["電腦。影片把它畫成一台遊戲機，螢幕裡輪流是軍艦、火裡的玩具兵、戰鬥機", "一般的說法是為了打仗：破解密碼、算火箭的路線"], note: "強森說這是「一般的說法」，接下來他講了另一個版本" },
+  { no: "No.16", name: "畫、球、骰子、紙鈔", era: "？", hollow: true, art: "play", q: ["它們是什麼", "它們好玩在哪"], a: ["一幅畫、一顆彩色的球、兩顆骰子、一疊像大富翁的紙鈔：公眾博物館、橡膠球、機率、保險", "看畫、丟球、擲骰子都是在玩，後來卻變成博物館、橡膠、機率理論、保險公司"] },
+  { quote: true },
+  { no: "2022", name: "ChatGPT", era: "2022", art: "chat", q: ["叫什麼", "好玩在哪"], a: ["ChatGPT（2022 年 11 月底）", "第 9 站的「寫字大鍵琴」會回字了。大家一開始拿它寫打油詩、叫它用海盜的口氣講話，沒有人規定它要拿來做什麼"] },
+  { no: "2026", name: "用說的讓東西動起來", era: "2026", art: "catapult", q: ["叫什麼", "好玩在哪"], a: ["用說的讓東西動起來。畫的是我們班 11/11 的投石機", "你們只要想怎麼中二地發射。板子裡那段程式，可以是 AI 寫的"] },
+  { no: "2030", name: "會合奏的笛子", era: "2030", art: "hum", q: ["叫什麼", "好玩在哪"], a: ["會合奏的笛子（我取的）", "今天很多人叫 AI 寫歌、做小遊戲送朋友。再過四年，我猜它會一邊聽你哼、一邊跟你合奏"], note: "笛子第三次出現" },
+  { no: "2036", name: "咒語工作台", era: "2036", art: "bench", red: true, q: ["叫什麼", "好玩在哪"], a: ["咒語工作台（我取的名字）", "你說出想要的東西，它把東西做出來，而且會動。就像 1750 年那個吹笛機器人，它現在看起來只是玩具"] },
+];
+const ERA_MARKS = { 0: "43,000 年前", 5: "2,000 年前", 7: "1700 年代", 11: "1800 年代", 17: "2022", 18: "2026", 19: "2030", 20: "2036" };
+
+/* ---------- 擺位置：音符平均排在譜上，圖與字輪流放在譜的上下四層 ---------- */
+const NS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const items = document.getElementById("items");
+const notes = ITEMS.map((it, i) => it);   // 引用同一份
+const N = ITEMS.length;                    // 21 格（含影片最後一句那一格）
+const X0 = 110, X1 = 1490, step = (X1 - X0) / (N - 1);
+const TIERS = [ { y: 150, up: true }, { y: 740, up: false }, { y: 365, up: true }, { y: 900, up: false } ];
+const PITCH = [670, 650, 630, 640, 660, 620, 610, 640, 650, 630, 660, 620, 640, 650, 630, 660, 0, 640, 620, 610, 600];
+let tierCount = 0;
+ITEMS.forEach((it, i) => {
+  const x = X0 + i * step;
+  it.x = x;
+  if (it.quote) return;
+  const t = TIERS[tierCount++ % 4];
+  const g = el("g", { class: "item", "data-i": i }, items);
+  it.g = g;
+  // 音符
+  const ny = PITCH[i];
+  const color = it.red ? "var(--red)" : "var(--pencil)";
+  const nh = el("ellipse", { cx: x, cy: ny, rx: 13, ry: 9, transform: `rotate(-20 ${x} ${ny})`, fill: it.hollow ? "var(--paper)" : color, stroke: color, "stroke-width": it.hollow ? 3 : 0, class: "nh" }, g);
+  el("path", { d: `M${x + 12} ${ny - 4} V${ny - 58}`, class: it.red ? "redl stem" : "ink stem" }, g);
+  if (it.hollow) { const q = el("text", { x: x + 20, y: ny - 30, class: "t-mid t-pen qm" }, g); q.textContent = "?"; }
+  // 圖與字的那一塊：寬 240，中心對齊音符，碰到紙邊就往內收
+  const bx = Math.max(30, Math.min(1570 - 240, x - 120));
+  const top = t.y;
+  const artY = t.up ? top : top + 4;
+  const ag = el("g", { transform: `translate(${bx + 30} ${artY}) scale(0.9)` , class: "art" }, g);
+  drawArt(ag, it.art, true);
+  const ty = artY + 132;
+  const l1 = el("text", { x: bx + 4, y: ty, class: "t-lab" }, g); l1.textContent = `${it.no}　${it.name}`;
+  const l2 = el("text", { x: bx + 4, y: ty + 26, class: "t-sm" }, g); l2.textContent = it.era;
+  // 虛線接到音符
+  const from = t.up ? ty + 36 : artY - 6;
+  const to = t.up ? ny - 64 : ny + 14;
+  el("path", { d: `M${x} ${from} V${to}`, class: "link" }, g);
+});
+// 年代刻度
+const eras = document.getElementById("eras");
+for (const k in ERA_MARKS) { const it = ITEMS[k]; const tx = el("text", { x: it.x, y: 712, class: "t-sm", "text-anchor": "middle" }, eras); tx.textContent = ERA_MARKS[k]; }
+// 「影片講到這裡」那一條虛線放在第 16 站與 2022 中間
+const cutX = ITEMS[16].x;
+document.querySelector("#cut path").setAttribute("d", `M${cutX} 560 V700`);
+el("text", { x: cutX, y: 548, class: "t-sm t-pen", "text-anchor": "middle" }, document.getElementById("cut")).textContent = "影片講到這裡";
+
+function drawArt(parent, key, small) {
+  const a = ART[key];
+  (a.fade || []).forEach(d => el("path", { d, class: "ink fade" }, parent));
+  (a.ink || []).forEach(d => el("path", { d, class: "ink" }, parent));
+  (a.pen || []).forEach(d => el("path", { d, class: "pen" }, parent));
+  (a.txt || []).forEach(([x, y, t]) => { const e = el("text", { x, y, "text-anchor": "middle", class: "arttxt", style: "font-size:15px;fill:var(--pen)" }, parent); e.textContent = t; });
+}
+
+/* ---------- 動畫 ---------- */
+function prep(p) { const len = p.getTotalLength(); p.style.strokeDasharray = len; p.style.strokeDashoffset = len; }
+document.querySelectorAll("#items path:not(.link), #cut path").forEach(p => { if (!p.closest("#cut")) prep(p); });
+gsap.set("#head text, #eras text, #cut, #items text, #items .nh, #items .link, #quoteLine", { opacity: 0 });
+gsap.set("#staff line", { attr: { x2: 60 } });
+
+const card = document.getElementById("card");
+function fillCard(it, i) {
+  card.className = it.x < 800 ? "right" : "left";
+  if (it.quote) {
+    card.classList.add("quote");
+    card.innerHTML = `<div class="no">影片最後一句</div><div class="no" style="font-weight:400">「你會在大家玩得最開心的地方找到未來」</div><div class="note">接下來，影片沒有了，我用他的方法自己往下畫</div>`;
+    return;
+  }
+  card.innerHTML = `<div class="no">${it.no}　${it.name}${it.era === it.no ? "" : `<small>${it.era === "？" ? "影片沒說哪一年" : it.era}</small>`}</div>`;
+  const s = el("svg", { viewBox: "-30 -12 260 140", preserveAspectRatio: "xMidYMid meet" }, card);
+  drawArt(s, it.art, false);
+  s.querySelectorAll("path").forEach(p => { p.style.strokeWidth = it.art === "organ" ? 2.2 : 2.6; prep(p); });
+  it.q.forEach((q, k) => { const d = document.createElement("div"); d.className = "qa"; d.innerHTML = `<b>${q}</b>${it.a[k]}`; card.appendChild(d); });
+  if (it.note) { const d = document.createElement("div"); d.className = "note"; d.textContent = it.note; card.appendChild(d); }
+}
+function drawPaths(tl, paths, total, pos) {
+  if (!paths.length) return;
+  const per = Math.max(0.18, total / paths.length);
+  tl.to(paths, { strokeDashoffset: 0, duration: per, ease: "power1.inOut", stagger: per * 0.85 }, pos);
+}
+function itemStep(i) {
+  const it = ITEMS[i];
+  const tl = gsap.timeline();
+  fillCard(it, i);
+  tl.fromTo(card, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .35 });
+  if (it.quote) {
+    tl.fromTo("#card .no, #card .note", { opacity: 0 }, { opacity: 1, duration: .5, stagger: .6 });
+    tl.to("#quoteLine", { opacity: 1, duration: .5 }, "<");
+    return tl;
+  }
+  const big = [...card.querySelectorAll("svg path")];
+  const bigFade = big.filter(p => p.classList.contains("fade")), bigRest = big.filter(p => !p.classList.contains("fade"));
+  const g = it.g;
+  const small = [...g.querySelectorAll(".art path")];
+  const smallFade = small.filter(p => p.classList.contains("fade")), smallRest = small.filter(p => !p.classList.contains("fade"));
+  gsap.set("#card .qa, #card .note", { opacity: 0 });
+  tl.to(g.querySelector(".nh"), { opacity: 1, duration: .25 }, "<");
+  tl.to(g.querySelector(".stem"), { strokeDashoffset: 0, duration: .3 }, "<");
+  tl.to(g.querySelectorAll("text"), { opacity: 1, duration: .4 }, "<");
+  if (bigFade.length) {
+    drawPaths(tl, bigFade, 1.4, ">"); drawPaths(tl, smallFade, 1.4, "<");
+    tl.to([...bigFade, ...smallFade], { opacity: .12, duration: .5 }, "+=.3");
+  }
+  drawPaths(tl, bigRest, Math.min(2.4, .35 * bigRest.length + .6), ">");
+  drawPaths(tl, smallRest, Math.min(2.4, .35 * smallRest.length + .6), "<");
+  tl.to(g.querySelector(".link"), { opacity: 1, duration: .3 }, "<");
+  tl.fromTo([...card.querySelectorAll(".arttxt"), ...g.querySelectorAll(".arttxt")], { opacity: 0 }, { opacity: 1, duration: .3 });
+  tl.fromTo("#card .qa", { opacity: 0, x: -8 }, { opacity: 1, x: 0, duration: .45, stagger: .7 });
+  if (it.note) tl.fromTo("#card .note", { opacity: 0 }, { opacity: 1, duration: .5 }, "+=.3");
+  return tl;
+}
+const steps = [
+  () => gsap.timeline().fromTo("#head text", { opacity: 0, x: -8 }, { opacity: 1, x: 0, duration: .45, stagger: .3 }),
+  () => { const tl = gsap.timeline();
+          tl.to("#staff line", { attr: { x2: 1540 }, duration: 1.1, stagger: .1, ease: "power2.out" });
+          tl.to("#eras text, #cut", { opacity: 1, duration: .4, stagger: .08 }, "-=.4"); return tl; },
+  ...ITEMS.map((_, i) => () => itemStep(i)),
+  () => gsap.timeline().to(card, { opacity: 0, duration: .4 }),   // 最後：收起大卡片，看整張
+];
+let k = 0, cur = null;
+/* ---------- 自動播：每一步畫完停一下再畫下一步 ---------- */
+/* 2026-11-18 Kevin：「這樣太久了，而且沒有必要讓 AI 同學配合人類，就用你覺得他該有的速度，
+   但我們假裝可以稍微慢一點讓人類看，但人類一看都覺得他的速度超快」→ 筆畫 2.5 倍速，每站只停半秒多，21 格約 45 秒 */
+gsap.globalTimeline.timeScale(2.5);
+// 保險：疊在大地圖裡的時候，瀏覽器有時不給這一頁畫面更新（requestAnimationFrame 停住），動畫就卡在原地。
+// 每 50 毫秒看一次，動畫一格都沒走就自己推一格；平常有畫面更新時不會插手。
+let 上一格 = -1;
+setInterval(() => { if (gsap.ticker.frame === 上一格) gsap.ticker.tick(); 上一格 = gsap.ticker.frame; }, 50);
+let 自動 = true, 等 = null;
+const 標 = document.createElement("div");
+標.style.cssText = "position:fixed;right:14px;bottom:10px;font:600 14px 'Noto Sans TC',sans-serif;color:#3a2e25;background:rgba(251,250,245,.85);border:1px solid #bbb;border-radius:14px;padding:3px 12px;opacity:.6;pointer-events:none";
+document.body.appendChild(標);
+function 更新標() { 標.textContent = k >= steps.length ? "畫完了" : 自動 ? "自動播放中（空白鍵暫停）" : "暫停中（空白鍵繼續）"; }
+function 停留秒(i) {   // i：剛畫完的那一步
+  if (i < 2) return 0.3;                 // 標題、五線譜
+  const it = ITEMS[i - 2];
+  if (!it) return 0;
+  if (it.quote) return 1.2;
+  return 0.6 + (it.note ? 0.4 : 0);      // AI 的速度：剛好看得到它寫了什麼，來不及讀完
+}
+function 排下一步() {
+  clearTimeout(等); 更新標();
+  if (!自動 || k >= steps.length) return;
+  const i = k - 1;
+  等 = setTimeout(() => { if (自動 && !(cur && cur.isActive())) next(); }, 停留秒(i) * 1000);
+}
+function 設自動(on) {
+  自動 = on; clearTimeout(等);
+  if (cur) cur.paused(!on);
+  if (on && !(cur && cur.isActive())) 排下一步();
+  更新標();
+}
+window.addEventListener("message", e => { if (e.data === "AI同學:暫停") 設自動(false); if (e.data === "AI同學:繼續") 設自動(true); });
+function finish() { if (cur) cur.progress(1); }
+function next() {
+  if (cur && cur.isActive()) { cur.progress(1); return; }
+  if (k >= steps.length) return;
+  if (k >= 3) gsap.to(card, { opacity: 0, duration: .2 });   // 換下一站之前先把上一張大卡片收掉
+  cur = steps[k++]();
+  cur.eventCallback("onComplete", 排下一步); 更新標();
+}
+function prev() {   // 回到上一站：重新整理到那一步，前面的都直接畫完
+  const target = Math.max(1, k - 1);
+  location.hash = "#" + target; location.reload();
+}
+function jumpTo(n) { while (k < n) { finish(); cur = steps[k++](); } finish(); }
+document.addEventListener("keydown", e => {
+  if (e.code === "Space") { e.preventDefault(); 設自動(!自動); }
+  else if (e.key === "ArrowRight" || e.key === "Enter") { e.preventDefault(); if (cur) cur.paused(false); next(); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); prev(); }
+  else if (e.key === "0") { finish(); gsap.to(card, { opacity: card.style.opacity === "0" ? 1 : 0, duration: .25 }); }
+});
+document.addEventListener("click", () => 設自動(!自動));
+const start = parseInt((location.hash || "").slice(1), 10);
+if (start > 1) { jumpTo(start); history.replaceState(null, "", location.pathname); 排下一步(); } else next();
+</script>
+</body>
+</html>
