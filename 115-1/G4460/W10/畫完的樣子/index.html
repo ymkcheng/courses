@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>畫完的樣子</title>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Serif+TC:wght@700&display=swap" rel="stylesheet">
+<style>
+/* G4460 W10「畫完的樣子」：像一位同學用 Keri Smith《Mess》的筆觸畫的兩張紙正反面（Kevin 2026-11-24「可以，兩件都做」，設計檔第 19 件）。
+   塗出界、寫錯不擦、畫壞的留著、箭頭拉到格子外；回答只畫波浪線，不寫真的內容（免得破梗、被照抄）。
+   網址帶 ?步=1～6，亮起那一段要寫的地方，其餘變淡。不帶就全部亮。 */
+:root{--bg:#efe4cc;--paper:#fbf8f0;--ink:#2b2420;--soft:#7a6a58;--hi:#c8643b;--red:#c0392b;--blue:#2f5f9e}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:"LXGW WenKai TC","Noto Serif TC",serif;overflow:hidden}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.6vh;padding:2vh 2vw}
+h1{font-size:clamp(26px,2.6vw,46px);font-weight:700}
+h1 .step{color:var(--hi)}
+.row{display:flex;gap:2.2vw;align-items:flex-end;justify-content:center;width:100%}
+.sheet{display:flex;flex-direction:column;align-items:center;gap:.8vh}
+.sheet .lab{font-size:clamp(18px,1.6vw,30px);font-weight:700;padding:2px 12px;border:2px solid var(--ink);border-radius:40% 8% 35% 10%/12% 40% 10% 35%;background:var(--paper);transform:rotate(-1.5deg)}
+.sheet .lab.b{transform:rotate(1.2deg)}
+svg{height:min(70vh,calc((96vw - var(--n) * 2.4vw) / var(--n) * 1.38));width:auto;display:block;filter:drop-shadow(5px 6px 0 #d6c29c)}
+.dim{opacity:.18;transition:opacity .4s}
+.note{font-size:clamp(16px,1.25vw,22px);color:var(--soft)}
+.gap{width:1vw}
+</style>
+</head>
+<body>
+<h1 id="title">畫完的樣子</h1>
+<div class="row" id="row"></div>
+<div class="note">照 Keri Smith《Mess》的精神畫的：塗出界、寫錯不擦、畫壞的留著。波浪線的地方寫你自己的</div>
+<script>
+const STEP = Number(new URLSearchParams(location.search).get('步') || 0);
+const TITLES = ['畫完的樣子','① 聽 Giertz：一站畫一個框','② 另一張 A4，折成八格：正面寫用途，反面寫沒有用卻想留著的','③ 兩人互看：同學在你折八格那張的正面、反面各框一格，再交還給你','④ 看完開學第一次的成果，寫這一句','⑤ 定調：我會先做什麼','⑥ 拍這四面，上傳'];
+document.getElementById('title').innerHTML = STEP ? `<span class="step">${TITLES[STEP]}</span>` : TITLES[0];
+// 每一段要亮的：[第幾張, 正反, 第幾格]；'*' 表示整面
+// 八格紙上的兩個框是兩人互看時旁邊那位同學寫的（Kevin 11-24 問「這個是誰寫的？」），第 2 段還沒有
+const FRAMED = !STEP || STEP >= 3;
+const HI = {
+  1: [['G','F','*'], ['G','B','C']],
+  2: [['E','F','*'], ['E','B','*']],
+  3: [['E','F',3], ['E','B',6]],
+  4: [['G','B','B']],
+  5: [['G','B','D']],
+  6: [['G','F','*'], ['G','B','*'], ['E','F','*'], ['E','B','*']],
+};
+const lit = (s, f, c) => !STEP || (HI[STEP] || []).some(([a,b,x]) => a===s && b===f && (x==='*' || x===c));
+
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const W = 420, H = 594, M = 22;
+// 手畫的線：一段一段抖一點
+function wob(x1,y1,x2,y2,amp=1.6){ const n=Math.max(3,Math.round(Math.hypot(x2-x1,y2-y1)/40)); let d=`M${x1.toFixed(1)},${y1.toFixed(1)}`; for(let i=1;i<=n;i++){const t=i/n; d+=` L${(x1+(x2-x1)*t+(rnd()-.5)*amp*2).toFixed(1)},${(y1+(y2-y1)*t+(rnd()-.5)*amp*2).toFixed(1)}`;} return d; }
+function box(x,y,w,h,amp){ return wob(x,y,x+w,y,amp)+' '+wob(x+w,y,x+w,y+h,amp)+' '+wob(x+w,y+h,x,y+h,amp)+' '+wob(x,y+h,x,y,amp); }
+function squig(x,y,w,lines=2,col='var(--ink)'){ let s=''; for(let k=0;k<lines;k++){ let d=`M${x},${y+k*16}`; for(let i=0;i<w;i+=10){ d+=` q5,${(k%2?-6:6)*(.6+rnd()*.6)} 10,0`; } s+=`<path d="${d}" fill="none" stroke="${col}" stroke-width="1.8" stroke-linecap="round"/>`; } return s; }
+const txt = (x,y,t,size=15,col='var(--ink)',w=400) => `<text x="${x}" y="${y}" font-size="${size}" fill="${col}" font-weight="${w}">${t}</text>`;
+function wrap(x,y,lines,size=14,col='var(--ink)'){ return lines.map((l,i)=>txt(x,y+i*(size+5),l,size,col)).join(''); }
+
+// 一面八格：兩欄四列。cells[i] 回傳那一格裡面要畫的東西
+function face(sheet, side, cells, extra=''){
+  const cw=(W-2*M)/2, ch=(H-2*M)/4;
+  let s=`<svg viewBox="-12 -12 ${W+24} ${H+24}" xmlns="http://www.w3.org/2000/svg"><path d="${box(0,0,W,H,2.4)}" fill="var(--paper)" stroke="var(--ink)" stroke-width="2.4"/>`;
+  // 折線
+  s+=`<path d="${wob(W/2,6,W/2,H-6,1.2)}" stroke="#b9ad97" stroke-dasharray="6 6" stroke-width="1.6" fill="none"/>`;
+  for(let r=1;r<4;r++) s+=`<path d="${wob(6,M+ch*r,W-6,M+ch*r,1.2)}" stroke="#b9ad97" stroke-dasharray="6 6" stroke-width="1.6" fill="none"/>`;
+  for(let i=0;i<8;i++){ const c=i%2, r=Math.floor(i/2), x=M+c*cw, y=M+r*ch;
+    const on=lit(sheet,side,i+1);
+    s+=`<g class="${on?'':'dim'}">${cells(i+1,x,y,cw,ch)}</g>`;
+    if (STEP && on && (HI[STEP]||[]).some(([a,b,xx])=>a===sheet&&b===side&&xx!=='*')) s+=`<path d="${box(x-4,y-4,cw+8,ch+8,3.5)}" fill="none" stroke="var(--hi)" stroke-width="5" stroke-linecap="round"/>`;
+  }
+  return s+extra+'</svg>';
+}
+const num = (x,y,n,col='var(--ink)') => `<circle cx="${x+18}" cy="${y+20}" r="13" fill="none" stroke="${col}" stroke-width="2"/>${txt(x+(n>9?9:13),y+26,n,16,col,700)}`;
+
+// Giertz 那張・正面：第 1 到 8 站
+// Giertz 那張（Kevin 2026-11-24「不一定要用折紙的，用畫的就好」）：不折，正面每停一次自己畫一個框、標號碼，第 1 到 13 站；
+// 背面正中間大圓第 14 站，三句寫在大圓旁邊。框的大小、位置學生自己決定，像《Mess》：歪的、出界的、拉箭頭的都可以
+function freeFace(sheet, side, parts){
+  let s=`<svg viewBox="-12 -12 ${W+24} ${H+24}" xmlns="http://www.w3.org/2000/svg"><path d="${box(0,0,W,H,2.4)}" fill="var(--paper)" stroke="var(--ink)" stroke-width="2.4"/>`;
+  for (const [key, svg, hb] of parts){
+    const on = lit(sheet, side, key);
+    s += `<g class="${on?'':'dim'}">${svg}</g>`;
+    if (STEP && on && hb && (HI[STEP]||[]).some(([a,b,x])=>a===sheet&&b===side&&x===key)) s += hb;
+  }
+  return s+'</svg>';
+}
+const BOXES = [[16,16,190,84],[220,14,184,70],[18,114,120,100],[150,104,108,86],[270,96,134,100],[150,200,120,86],[18,226,120,92],[282,210,122,110],[150,298,124,84],[18,332,124,96],[154,394,250,74],[18,440,150,112],[182,480,222,86]];
+const gFront = freeFace('G','F', BOXES.map((b,i)=>{
+  const [x,y,w,h]=b, n=i+1;
+  let s=`<path d="${box(x,y,w,h,3.2)}" fill="none" stroke="var(--ink)" stroke-width="2.2"/>`+num(x-4,y-6,n)+squig(x+36,y+16,w-48,1)+squig(x+12,y+44,w-24,Math.max(1,Math.floor((h-46)/16)));
+  if(n===1) s+=`<path d="${wob(x+120,y+48,x+170,y+48)} ${wob(x+170,y+48,x+170,y+84)} ${wob(x+170,y+84,x+120,y+84)} ${wob(x+120,y+84,x+120,y+48)}" fill="none" stroke="var(--ink)" stroke-width="2"/>`+[0,1,2,3].map(k=>`<circle cx="${x+130+k*12}" cy="${y+62}" r="4" fill="none" stroke="var(--ink)" stroke-width="1.6"/>`).join('');
+  if(n===4) s+=`<path d="M${x+8},${y+70} l${w-16},4" stroke="var(--red)" stroke-width="2.4"/>`;
+  if(n===7) s+=`<path d="M${x+w-10},${y+h-20} q40,6 60,-40" fill="none" stroke="var(--ink)" stroke-width="2"/><path d="M${x+w+50},${y+h-60} l-9,3 m9,-3 l1,9" stroke="var(--ink)" stroke-width="2"/>`;
+  if(n===10) s+=`<path d="${wob(x+60,y+60,x+130,y+90,7)} ${wob(x+130,y+90,x+80,y+50,7)}" fill="none" stroke="var(--ink)" stroke-width="2.2"/>`;
+  return ['*', s, ''];
+}).concat([['*', `<circle cx="330" cy="560" r="40" fill="none" stroke="#c9a77a" stroke-width="7" opacity=".55"/>`+txt(300,548,'⋯',22,'var(--soft)'), '']]));
+
+const CX = W/2, CY = H/2, CR = 150;
+const ring = `<path d="M${CX+CR},${CY} ${Array.from({length:37},(_,i)=>{const a=i/36*Math.PI*2, r=CR+(rnd()-.5)*6; return 'L'+(CX+r*Math.cos(a)).toFixed(1)+','+(CY+r*Math.sin(a)).toFixed(1);}).join(' ')}" fill="var(--paper)" stroke="var(--ink)" stroke-width="3"/>`
+  + num(CX-18,CY-CR+14,14) + squig(CX-CR+40,CY-30,2*CR-80,2) + squig(CX-CR+30,CY+18,2*CR-60,2);
+const hiBox = (x,y,w,h)=>`<path d="${box(x,y,w,h,3.5)}" fill="none" stroke="var(--hi)" stroke-width="5"/>`;
+const gBack = freeFace('G','B',[
+  ['B', wrap(226,40,['剛來上這門課的時候，','我覺得一張紙只能拿來','～～～（做什麼？）；','現在我覺得它還可以','～～～（做什麼？）'],14), hiBox(214,14,196,110)],
+  ['C', ring, `<circle cx="${CX}" cy="${CY}" r="${CR+9}" fill="none" stroke="var(--hi)" stroke-width="5"/>`],
+  ['D', wrap(20,500,['我會先～～～～','（做什麼？），','因為～～～～～'],16), hiBox(8,474,190,82)],
+]);
+
+const eFront = face('E','F',(n,x,y,cw,ch)=>{
+  let s=squig(x+14,y+26,cw-30,3);
+  if(n===3 && FRAMED) s+=`<path d="${box(x+6,y+66,cw-12,ch-74,3)}" fill="none" stroke="var(--red)" stroke-width="2.4"/>`+wrap(x+14,y+86,['這一格讓我驚艷，','因為～～～～'],15,'var(--red)')+txt(x+cw-86,y+ch-12,'同學簽名',12,'var(--red)');
+  return s;
+});
+// 八格紙・反面：沒有用、卻讓人想留著的東西；第 6 格被另一位同學框起來
+const eBack = face('E','B',(n,x,y,cw,ch)=>{
+  let s=squig(x+14,y+26,cw-30,3);
+  if(n===6 && FRAMED) s+=`<path d="${box(x+6,y+66,cw-12,ch-74,3)}" fill="none" stroke="var(--red)" stroke-width="2.4"/>`+wrap(x+14,y+86,['這一格讓我驚艷，','因為～～～～'],15,'var(--red)')+txt(x+cw-86,y+ch-12,'同學簽名',12,'var(--red)');
+  if(n===2) s+=`<path d="M${x+30},${y+70} q40,-30 80,10 t60,0" fill="none" stroke="var(--ink)" stroke-width="2.2"/>`;
+  return s;
+});
+
+const SHOW = {1:['GF','GB'],2:['EF','EB'],3:['EF','EB'],4:['GF','GB'],5:['GF','GB'],6:['GF','GB','EF','EB']}[STEP] || ['GF','GB','EF','EB'];
+document.documentElement.style.setProperty('--n', SHOW.length);
+const sheet = (lab, svg, cls='') => `<div class="sheet"><div class="lab ${cls}">${lab}</div>${svg}</div>`;
+const ALL = {GF: sheet('Giertz 那張・正面', gFront), GB: sheet('Giertz 那張・背面', gBack, 'b'), EF: sheet('折八格那張・正面', eFront), EB: sheet('折八格那張・反面', eBack, 'b')};
+document.getElementById('row').innerHTML = SHOW.map(k => ALL[k]).join('');
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && window.parent !== window) { const x = window.parent.document.querySelector('#sampleLayer .x'); if (x) x.click(); } });
+</script>
+</body>
+</html>

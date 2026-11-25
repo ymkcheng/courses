@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>換你</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#EFE4CC;--card:#F7EFDD;--ink:#3A2E25;--soft:#6B5A49;--shadow:#D6C29C;--terra:#C8643B;--sage:#6F8F62}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--paper);color:var(--ink);font-family:"Noto Sans TC",sans-serif;overflow:hidden}
+body{background-image:radial-gradient(#CDBB94 0.7px,transparent 0.8px);background-size:7px 7px}
+/* 2026-11-18 Kevin：影片可以再大一點，右邊小一點但不能太小 → 62:38 改 68:32，卡片留白與間距跟著縮 */
+.stage{display:grid;grid-template-columns:68fr 32fr;gap:24px;height:100vh;padding:24px}
+.left{display:flex;flex-direction:column;gap:14px;min-height:0;justify-content:center}
+.video{border:1.5px solid var(--ink);border-radius:4px;background:#1d1a17;position:relative;box-shadow:5px 5px 0 var(--shadow);aspect-ratio:16/9;width:100%;max-height:calc(100vh - 56px - 180px)}
+.credit{margin-top:6px;display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13px;color:#6b5a49}
+.src a{color:inherit}.src{margin-top:-12px;text-align:right;font-size:12px;color:#6b5a49;opacity:.75}
+.jump{display:flex;align-items:center;gap:4px;flex-wrap:nowrap}
+.jump span{font:600 14px "Noto Sans TC",sans-serif;color:var(--soft);margin-right:4px;white-space:nowrap}
+.jump button{font:600 14px "Noto Sans TC",sans-serif;width:28px;height:28px;border-radius:50%;border:1.5px solid var(--ink);background:var(--card);color:var(--ink);cursor:pointer;padding:0}
+.jump button:hover{background:#FBF5E8}
+.jump button.now{background:var(--terra);border-color:var(--terra);color:#fff}
+.rew{font:600 15px "Noto Sans TC",sans-serif;color:var(--ink);background:var(--card);border:1.5px solid var(--ink);border-radius:18px;padding:5px 14px;cursor:pointer;box-shadow:2px 2px 0 var(--shadow)}
+.rew:hover{background:#FBF5E8}
+.sub{min-height:clamp(110px,17vh,150px);display:flex;align-items:center;justify-content:center;text-align:center;padding:10px 24px;background:#2B241E;color:#FBF3E2;border-radius:4px;box-shadow:5px 5px 0 var(--shadow);font-family:"Noto Sans TC",sans-serif;font-weight:500;font-size:clamp(30px,3.2vw,52px);line-height:1.35}
+.still{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:3;display:none;cursor:pointer;border-radius:3px}
+.still.on{display:block}
+.video iframe,#yt{position:absolute;inset:0;width:100%;height:100%;border:0}
+.catch{position:absolute;left:0;right:0;top:0;bottom:56px;cursor:pointer;z-index:2}
+.panel{position:relative;cursor:pointer;user-select:none}
+.card{position:absolute;inset:0;background:var(--card);border:1.5px solid var(--ink);border-radius:4px;box-shadow:5px 5px 0 var(--shadow);padding:36px 30px;display:flex;flex-direction:column;justify-content:center;gap:22px;opacity:0;transform:translateY(24px) rotate(-1.2deg);transition:opacity .45s,transform .45s;pointer-events:none}
+.card.on{opacity:1;transform:none}
+.card::before{content:"";position:absolute;inset:10px;border:.5px solid var(--ink);border-radius:2px;pointer-events:none}
+.big{font-family:"Noto Serif TC",serif;font-weight:700;font-size:clamp(56px,8vw,120px);line-height:1;color:var(--terra)}
+.say{font-family:"Noto Serif TC",serif;font-weight:500;font-size:clamp(24px,2.25vw,38px);line-height:1.45}
+.no{font-family:"Noto Serif TC",serif;font-weight:700;color:var(--ink);border-bottom:3px dotted var(--terra)}
+.items{list-style:none;display:flex;flex-direction:column;gap:12px;font-size:clamp(20px,1.8vw,28px);color:var(--soft)}
+.items li{display:flex;gap:12px;align-items:center}
+.when{font-family:"Noto Serif TC",serif;font-weight:700;font-size:clamp(24px,2.3vw,36px);color:var(--terra);background:#FBF5E8;border:1px solid var(--terra);border-radius:3px;padding:6px 14px;align-self:flex-start}
+.items b{display:inline-grid;place-items:center;width:1.6em;height:1.6em;border-radius:50%;background:var(--ink);color:var(--card);font-weight:500;font-size:.8em}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.cell{background:#FBF5E8;border:1px solid var(--ink);border-radius:3px;box-shadow:3px 3px 0 var(--shadow);aspect-ratio:5/4;padding:8px 10px;font-family:"Noto Serif TC",serif;font-weight:700;font-size:clamp(16px,1.4vw,22px)}
+.cell.y{border:1.5px dashed var(--terra);color:#9A4423}
+.grid.four{grid-template-columns:repeat(2,1fr)}
+.tape{height:14px;border-radius:7px;background:var(--sage);background-image:radial-gradient(var(--card) 1.6px,transparent 1.8px);background-size:12px 14px;background-position:3px 0}
+.go{font-size:clamp(18px,1.5vw,24px);color:var(--soft)}
+
+.q{font-family:"Noto Serif TC",serif;font-weight:500;font-size:clamp(22px,2vw,34px);line-height:1.5;color:var(--soft);border-left:4px solid var(--sage);padding:4px 0 4px 16px}
+.q small{display:block;font-family:"Noto Sans TC",sans-serif;font-size:.6em;letter-spacing:.08em;color:var(--sage);margin-bottom:4px}
+.you{font-family:"Noto Serif TC",serif;font-weight:700;font-size:clamp(26px,2.5vw,42px);line-height:1.45}
+.you b{color:var(--terra)}
+.where{font-size:clamp(18px,1.5vw,24px);color:var(--soft)}
+.where .no{font-size:1.1em}
+.sheets{display:flex;gap:28px;justify-content:center}
+.sheet{margin:0;display:flex;flex-direction:column;align-items:center;gap:8px}
+.sheet figcaption{font-family:"Noto Serif TC",serif;font-weight:700;font-size:clamp(18px,1.5vw,24px)}
+.g8{position:relative;display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(4,1fr);width:clamp(150px,11vw,210px);aspect-ratio:1/1.414;background:#FBF5E8;border:1.5px solid var(--ink);box-shadow:3px 3px 0 var(--shadow)}
+.g8 .c{border:1px dashed #b9ad97;display:flex;align-items:flex-start;justify-content:flex-start;padding:4px 6px;font-family:"Noto Serif TC",serif;font-weight:700;font-size:clamp(15px,1.2vw,20px)}
+.g8.back .c:nth-child(8){color:var(--terra);align-items:flex-end;justify-content:flex-end;font-size:clamp(20px,1.7vw,28px)}
+.free{position:relative;width:clamp(150px,11vw,210px);aspect-ratio:1/1.414;background:#FBF5E8;border:1.5px solid var(--ink);box-shadow:3px 3px 0 var(--shadow)}
+.free span{position:absolute;border:2px solid var(--ink);border-radius:4px 10px 6px 12px/10px 4px 12px 6px;font-family:"Noto Serif TC",serif;font-weight:700;font-size:clamp(12px,1vw,17px);padding:0 4px}
+.free i{position:absolute;right:6%;bottom:2%;font-style:normal;color:var(--soft)}
+.free .ring{position:absolute;left:50%;top:50%;width:78%;aspect-ratio:1;transform:translate(-50%,-50%);border:3px solid var(--terra);border-radius:50%;display:grid;place-items:center;font-family:"Noto Serif TC",serif;font-weight:700;font-size:clamp(22px,2vw,32px);color:var(--terra)}
+.g8 .ring{position:absolute;left:50%;top:50%;width:78%;aspect-ratio:1;transform:translate(-50%,-50%);border:3px solid var(--terra);border-radius:50%;background:#FBF5E8;display:grid;place-items:center;font-family:"Noto Serif TC",serif;font-weight:700;font-size:clamp(22px,2vw,32px);color:var(--terra)}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="left"><div class="video"><div id="yt"></div><div class="catch" id="catch" title="點一下繼續播"></div><img class="still" id="still" alt="" title="點一下繼續播"></div><div class="sub" id="sub"></div><div class="src">演講：Simone Giertz〈Why you should make useless things〉，TED 所有，<a href="https://www.ted.com/talks/simone_giertz_why_you_should_make_useless_things" target="_blank" rel="noopener">在 TED.com 看</a>｜下方字幕：TED 官方繁中翻譯，譯者 Yanyan Hong，審譯者 Helen Chang｜右邊卡片上她的話：譯自原話</div><div class="credit"><button class="rew" id="close" title="回到大地圖">× 收起來（Esc）</button><div class="jump" id="jump"><span>跳到第幾站：</span></div></div></div>
+  <div class="panel" id="panel"></div>
+</div>
+<script>
+/* G4460 W10 Giertz 九站。由 產生器/W10-停格卡.py 產生，不要手改這一份，改產生器。
+   TED 官方 YouTube 頻道上傳的同一場演講（11:58）。影片不剪不加字，只用官方播放器播、到點暫停。 */
+const VIDEO = 'c0bsKc4tiuY';
+const CUES = [[13.72, 15.1, "大家好。"], [15.12, 16.32, "我是西蒙。"], [17.28, 20.58, "你知道大家常說 如果你在臺上感到緊張，"], [20.6, 23.1, "就想像臺下的觀眾都沒穿衣服？"], [23.12, 26.5, "好像這麼做會讓你感覺好點一樣。"], [26.52, 27.78, "但是我在想——"], [27.8, 33.22, "在 2018 年還想像你們沒穿衣服 感覺實在有點奇怪和不對勁。"], [33.24, 36.26, "我們如此盡力地擺脫過去，"], [36.28, 38.9, "對此我們需要有個新方法"], [38.92, 41.06, "克服上臺的緊張。"], [41.08, 43.22, "我意識我很喜歡的一點是"], [43.24, 47.3, "當你們看著我的時候， 我也同樣能盯著你們——"], [47.32, 49.74, "這樣才公平吧。"], [49.76, 52.5, "我就想如果我有更多的眼睛，"], [52.52, 55.3, "那麽我們彼此凝望的時候 會更自在，不是嗎？"], [55.32, 59.06, "所以為了這個演講， 我給自己做了件衣服。"], [59.23, 62.23, "（找衣服聲）"], [65.0, 66.92, "（笑聲）"], [69.8, 72.78, "上面是鼓鼓的小眼睛。"], [72.8, 74.9, "我花了14個小時，"], [74.92, 78.62, "用了227個鼓鼓小眼睛 來完成這件衣服。"], [78.64, 81.7, "為了可以用它來盯著你們所有人， 像你們現在看著我一樣，"], [81.72, 84.22, "只是創造這件衣服的一半原因。"], [84.24, 86.18, "另一半原因是為了可以這樣做。"], [86.2, 87.54, "（眼球搖動聲）"], [87.56, 88.82, "（笑聲）"], [88.84, 90.58, "所以我做了很多這樣的東西。"], [90.6, 94.42, "我發現一個問題， 然後我就發明解決它的東西。"], [94.44, 96.26, "比如說，刷牙。"], [96.28, 99.22, "這是我們都要做的事， 確實有點無聊，"], [99.24, 101.34, "沒人喜歡。"], [101.36, 103.74, "如果觀衆席裏有 7 歲小孩，"], [103.76, 106.26, "他們肯定會說：｢沒錯！｣"], [106.28, 109.12, "所以如果你有個 可以幫你刷牙的機器呢？"], [114.8, 117.92, "（笑聲）"], [118.72, 119.96, "我把它叫做…"], [122.36, 124.32, "我叫它｢自助刷牙頭盔｣。"], [125.0, 127.68, "（笑聲）"], [129.48, 132.22, "（機器手臂聲）"], [132.24, 135.46, "（笑聲）"], [135.48, 138.98, "（掌聲）"], [139.0, 143.54, "所以，10 個牙醫裡有 0 位 推薦了我的自助刷牙頭盔，"], [143.56, 147.74, "當然它沒能帶來牙科界的革命，"], [147.76, 150.94, "但它確實徹底改變了我的生活。"], [150.96, 154.42, "因為三年前我創造了 這個自助刷牙頭盔，"], [154.44, 155.98, "在我完成它以後，"], [156.0, 158.66, "我走進了客廳，放了一臺攝影機，"], [158.68, 161.16, "我拍攝了它運作的 7 秒短片。"], [161.76, 162.98, "到現在，"], [163.0, 165.9, "這就像標準的現代童話故事，"], [165.92, 168.14, "一個女孩在網上發佈影片，"], [168.16, 170.74, "網路如暴風雨般席捲了這個女孩，"], [170.76, 173.58, "成千上萬的人湧入了評論區"], [173.6, 175.3, "向這個女孩求婚——"], [175.32, 176.34, "（笑聲）"], [176.36, 178.7, "她無視了這一切， 開始了一個 YouTube 頻道，"], [178.72, 180.36, "繼續創造她的機器人。"], [181.12, 185.06, "從那以後，我就在網路上 為自己設計了這個小世界，"], [185.08, 187.58, "當一個發明無用之物的發明家，"], [187.6, 189.26, "因為正如我們所知，"], [189.28, 192.94, "在你所處的領域登峰造極， 最簡單的方式"], [192.96, 195.06, "就是選擇一個小領域。"], [195.08, 197.3, "（笑聲）"], [197.32, 201.66, "（掌聲）"], [201.68, 204.86, "所以我開始了一個 YouTube 頻道 發佈我發明的小機器，"], [204.88, 207.66, "我做過的事包含用無人機剪髮——"], [207.68, 209.38, "（無人機聲音）"], [209.4, 211.78, "（笑聲）"], [211.8, 212.86, "（無人機撞翻）"], [212.88, 214.3, "（笑聲）"], [214.32, 215.42, "（無人機聲音）"], [215.44, 217.34, "（笑聲）"], [217.36, 219.46, "（掌聲）"], [219.48, 222.22, "還有發明了一個 早上叫我起床的機器——"], [222.24, 224.18, "（鬧鈴）"], [224.2, 226.6, "（笑聲）"], [229.2, 230.94, "（影片）西蒙：哦嗚！"], [230.96, 233.54, "還有這個能幫我切蔬菜的機器。"], [233.56, 236.0, "（切菜聲）"], [237.2, 238.46, "我不是工程師，"], [238.48, 240.82, "我沒在學校學習過工程，"], [240.84, 244.42, "但我是個很上進的學生，"], [244.44, 246.94, "中學的時候，我的成績一直都拿甲，"], [246.96, 249.18, "我以全校前幾名畢業。"], [249.2, 250.46, "在另一方面，"], [250.48, 254.18, "我一直有嚴重的表演焦慮症，"], [254.2, 257.22, "這是一封我當時發給我哥的郵件，"], [257.24, 260.14, "｢你不會懂對我來說， 告訴你這個有多困難，"], [260.16, 261.38, "去承認，"], [261.4, 262.78, "我太羞愧了，"], [262.8, 265.02, "我不想讓人覺得我很蠢，"], [265.04, 266.62, "現在我開始哭了，"], [266.64, 268.1, "可惡。｣"], [268.12, 271.66, "當然，我並沒有意外 把我爸媽家燒了，"], [271.68, 275.98, "我在郵件裡寫的事， 我如此難過的事，"], [276.0, 278.24, "是因為我在數學考試中拿了乙。"], [279.48, 282.68, "在這兩個時間點之間 一定有什麽事發生在我身上了。"], [283.6, 288.02, "（笑聲）"], [288.04, 290.22, "青春期也是其中之一。"], [290.24, 291.62, "（笑聲）"], [291.64, 293.02, "的確，美妙的時光。"], [293.04, 294.38, "但是，此外，"], [294.4, 296.54, "我對創造機器發明感興趣了，"], [296.56, 299.82, "我想要自學硬體設備，"], [299.84, 303.34, "利用硬體去製作東西， 特別是還是自學，"], [303.36, 305.74, "這真的非常困難。"], [305.76, 307.66, "失敗的可能性很大，"], [307.68, 308.9, "另外，"], [308.92, 311.7, "也很可能讓你顯得很蠢，"], [311.72, 313.84, "這就是我那時最大的恐懼，"], [314.64, 320.9, "所以我想出了 能夠 100% 成功的方案，"], [320.92, 324.3, "因此我幾乎不可能會失敗，"], [324.32, 327.3, "這個方案便是 我不再嘗試成功，"], [327.32, 329.88, "我嘗試去創造一定會失敗的東西。"], [331.36, 333.62, "即使在那時我還不明白，"], [333.64, 337.58, "創造愚蠢的東西，其實很聰明，"], [337.6, 340.26, "因為我一直在學習硬體，"], [340.28, 341.74, "這是我人生第一次，"], [341.76, 344.28, "我沒有感到表演焦慮，"], [344.88, 348.58, "一旦我讓自己不再有壓力和期望，"], [348.6, 351.98, "壓力一下轉換成了動力，"], [352.0, 353.76, "它讓我能夠去盡情體驗。"], [354.88, 356.14, "身為發明家，"], [356.16, 358.58, "我對人們所困惑的事情感興趣，"], [358.6, 362.18, "這寫事情可以是小事或大事， 亦或是不大不小的事情。"], [362.2, 366.74, "和像做 TED 演講一樣的事情 讓我提出一系列小問題，"], [366.76, 368.26, "並可以得到解決。"], [368.28, 371.38, "發現問題是我創造無用的機器，"], [371.38, 372.86, "前進的第一步。"], [373.52, 375.06, "在我來這裏之前，"], [375.08, 378.66, "我坐下來想了一些 我可能會碰到的問題"], [378.68, 379.96, "在我做這個演講中。"], [380.72, 382.0, "忘詞。"], [383.48, 384.78, "觀衆不笑——"], [384.8, 386.0, "説的就是你。"], [387.08, 388.3, "或者更糟，"], [388.32, 390.24, "你在不應該笑的時候笑，"], [391.48, 393.06, "現在這部分還是可以笑的，"], [393.08, 394.3, "謝謝你們。"], [394.32, 395.34, "（笑聲）"], [395.36, 397.74, "或者當我緊張的時候， 我的手會開始抖"], [397.76, 399.82, "我對這感覺很不安。"], [399.84, 402.98, "或者我褲拉鏈一直忘記拉上了"], [403.0, 405.06, "我沒發現，但是你們都發現了。"], [405.08, 408.14, "但是現在是拉上的， 所以對於這個沒什麽擔憂。"], [408.16, 411.62, "但是其中關於手抖 我真的非常不安，"], [411.64, 413.82, "我記得我還是孩子時，"], [413.84, 415.54, "在學校裏演講，"], [415.56, 417.66, "我會把筆記寫在一張紙上，"], [417.68, 421.14, "然後我會把筆記本墊在後面，"], [421.16, 424.42, "這樣人們就不會 發現紙一直在抖動。"], [424.44, 426.16, "然後我做了很多演講，"], [427.0, 431.06, "我知道你們中的一半或許會說："], [431.08, 433.06, "「創造無用的機器發明真有趣，"], [433.08, 435.74, "但要以什麽樣的方式， 或者怎樣才會有商業價值呢？」"], [435.76, 437.7, "做一個演講就是其中之一。"], [437.72, 440.78, "組織者經常會在臺上放一杯水，"], [440.8, 443.14, "如果你渴了，你就可以喝，"], [443.16, 447.06, "我總是悲慘地會想要喝水，"], [447.08, 448.94, "但是我太怕把杯子擧起來了，"], [448.96, 452.26, "因為這樣觀衆就會發現我手抖。"], [452.28, 456.38, "為什麽不做一個 能遞水給你的機器呢？"], [456.4, 459.58, "把它買給那個穿著 一身曲面工藝眼衣服的女孩。"], [459.6, 462.6, "事實上，我需要把這脫掉， 因為我有一個東西——"], [463.44, 466.32, "（曲面工藝與發出聲音）"], [471.4, 472.82, "哦，"], [472.84, 474.34, "（叮噹聲）"], [474.36, 477.12, "（笑聲）"], [485.48, 488.46, "我仍然不曉得應該怎麽叫這個東西，"], [488.48, 492.02, "但我覺得就像「頭部軌道裝置」，"], [492.04, 495.06, "因為這個繞著你旋轉"], [495.08, 496.58, "你可以把任何東西放在上面。"], [496.6, 500.42, "你可以放一個攝像機， 你可以拍你整個腦袋的照片。"], [500.44, 504.34, "就像真的—— 多用途機器。"], [504.36, 506.06, "（笑聲）"], [506.08, 507.98, "好的，我有——"], [508.0, 510.42, "我的意思是，你可以 放一些零食在上面，比如，"], [510.44, 511.7, "如果你想的話。"], [511.72, 513.54, "我這有一些爆米花，"], [513.56, 518.04, "你就像這樣放一些在那，"], [519.0, 520.54, "如果你想要的話——"], [520.56, 523.38, "有些要為科學獻身了——"], [523.4, 526.46, "有些爆米花掉地上了。"], [526.48, 527.89, "讓我們繞遠路。"], [527.92, 529.62, "（機器聲音）"], [529.64, 531.42, "（笑聲）"], [531.44, 533.01, "然後你有這個小手，"], [533.04, 534.86, "你需要調整它的高度，"], [534.88, 536.46, "你衹需要聳聳肩。"], [536.48, 538.38, "（笑聲）"], [538.4, 539.62, "（掌聲）"], [539.64, 540.9, "這裏還有個小手。"], [540.92, 542.14, "（小手發出的聲音）"], [542.16, 543.38, "（笑聲）"], [543.4, 546.96, "（掌聲）"], [551.48, 554.18, "我剛剛把麥克風撞了，"], [554.2, 556.12, "但我覺得我們應該沒什麽問題。"], [557.24, 559.66, "好的，我要咀嚼下著爆米花，"], [559.68, 562.62, "所以你們大家幫個忙， 鼓掌聲響一點——"], [562.64, 566.74, "（掌聲）"], [566.76, 569.58, "好，這就像你個人的太陽系，"], [569.6, 571.5, "因為我是個千禧一代，"], [571.52, 573.98, "所以我想要所有東西都繞著我轉。"], [574.0, 577.06, "（笑聲）"], [577.08, 579.7, "回到一杯水的話題， 我們在這裏就等這個。"], [579.72, 581.78, "所以，我保證—— 我的意思是，它還是——"], [581.8, 583.38, "它裏面沒水，"], [583.4, 584.9, "我很抱歉。"], [584.92, 589.5, "但我還是要改進這個裝置，"], [589.52, 592.78, "因我還需自己拿起水杯， 放到這表面上，"], [592.8, 594.82, "但是如果你手抖得不是很厲害，"], [594.84, 596.1, "不會有人注意"], [596.12, 599.02, "因為你穿戴著這麽一件迷人的裝置。"], [599.04, 600.46, "所以，我們沒問題。"], [600.48, 601.68, "好的。"], [602.15, 603.3, "（裝置聲音）"], [603.32, 604.76, "（哼歌聲）"], [605.8, 608.3, "哦不，卡住了。"], [608.32, 611.48, "連機器有時都會怯場 不是令人欣慰嗎？"], [612.2, 614.04, "衹是卡住了一點。"], [615.48, 616.96, "它們可真像人。"], [617.88, 620.5, "哦等一下，我們倒回去一點，"], [620.52, 621.74, "然後——"], [621.76, 622.98, "（杯子掉落）"], [623.0, 625.18, "（笑聲）"], [625.2, 627.66, "這一刻還活著真好，對吧？"], [627.68, 629.94, "（笑聲）"], [629.96, 634.56, "（掌聲）"], [636.68, 641.3, "所以我的機器 簡直就和工程鬧劇一樣，"], [641.32, 644.74, "我意識到我偶然發現了更大的東西。"], [644.76, 649.66, "這不就是我們常在工程設計中， 丟掉的那些喜悅和謙卑之情，"], [649.68, 652.22, "對於我來説，這是 學習硬體的一種方式，"], [652.24, 655.04, "沒有所謂的表演焦慮會阻擋我。"], [656.04, 659.66, "經常有人問我，有沒有想過 去創造一些有用的東西，"], [659.68, 661.2, "也許某天我會。"], [662.44, 663.74, "但是我看到的路，"], [663.76, 665.06, "我所走過的，"], [665.08, 667.44, "因為我為自己創造了這個職業，"], [668.32, 671.18, "這是我從未計劃過的，"], [671.2, 672.42, "或者我可以——"], [672.44, 676.56, "（掌聲）"], [678.0, 680.42, "是從未計劃過的。"], [680.44, 683.98, "衹是碰巧我熱愛我正在做的事情，"], [684.0, 686.74, "以及與其他的人分享我的熱情。"], [686.76, 690.14, "對於我來説， 創造無用之物真正的美在於，"], [690.16, 692.18, "因為這就是承認"], [692.2, 694.6, "你並不總是知道最好的答案。"], [695.16, 698.2, "它熄掉你腦海中堅信"], [698.24, 700.98, "自己知道這世界如何確切運作的聲音。"], [701.0, 703.34, "也許能刷牙的頭盔不是答案，"], [703.36, 705.3, "但是至少你問了問題。"], [705.32, 706.54, "謝謝。"], [706.56, 710.6, "（掌聲）"]];
+const STOPS = [88.6, 138.6, 219.2, 230.7, 236.9, 240.5, 287.7, 331.0, 407.9, 496.4, 551.2, 636.5, 686.5, 689.8];
+const CARDS = [["上台會緊張，如果我有更多眼睛，大家互相盯著看就比較自在。所以我花了 14 個小時，用 227 個會動的眼睛做了這件衣服", "同樣上台會緊張，你會怎麼做？"], ["刷牙很無聊，沒人喜歡，所以我做了「自助刷牙頭盔」", "同樣有一件每天都要做又很無聊的事，你會怎麼做？"], ["我開了一個頻道放我做的機器，像是用無人機剪頭髮", "它剪了幾下就撞翻了，同樣想剪頭髮，你會怎麼做？"], ["還有一台早上叫我起床的機器", "它用一隻手打醒她，同樣早上起不來，你會怎麼做？"], ["還有這台幫我切菜的機器", "同樣要切菜，你會怎麼做？"], ["我不是工程師，在學校沒學過工程", "同樣想做一台機器卻沒學過，你會從哪裡開始？"], ["國中高中全拿 A，那封信裡讓我難過成這樣的，是數學考試拿了 B", "同樣拿到一個讓你難過的分數，你會怎麼做？"], ["自學硬體很難、怕看起來很蠢，所以我想出一個保證成功的方法：不再嘗試成功，改去做一定會失敗的東西", "同樣要自學一件很難的事、又怕看起來很蠢，你會怎麼做？"], ["來這裡之前，我想了這場演講可能碰到的問題：忘詞、觀眾不笑、在不該笑的地方笑、手會抖、拉鍊沒拉", "如果明天換你站上這個台，你會先想到哪些問題？"], ["台上都會放一杯水，可是我手會抖、不敢拿，所以我做了這個「頭部軌道裝置」，它繞著頭轉，什麼都可以放上去", "同樣手會抖、不敢拿水，你會怎麼做？"], ["上面可以放相機、放爆米花，還有兩隻小手", "如果是你，你會在上面放什麼？"], ["連機器有時候都會怯場（杯子掉下來），這一刻還活著真好", "同樣在大家面前，你做的東西壞了，你會怎麼做？"], ["常有人問我會不會做出有用的東西，我覺得我已經做到了：我替自己做出了一份從沒計畫過的工作，只因為我很熱愛，也跟別人分享", "同樣被問「做這個有什麼用」，你會怎麼回答？"], ["對我來說，這就是做沒有用的東西真正美的地方", "做沒有用的東西，美在哪裡？"]];
+const OBJECT = new Set([1, 2, 3, 4, 5, 10, 11, 12]);
+const cell = n => n < STOPS.length ? `在正面畫一個框，標上 <span class="no">${n}</span>，` + (OBJECT.has(n) ? `先畫下她做的，再寫你的` : `畫或寫都可以`) : `翻到背面，在正中間畫一個大圓，寫在圓裡`;
+const cards = [
+  `<div class="tape"></div><div class="say">一張空白 A4，不用折<br>影片停下來，就換你</div><div class="sheets"><figure class="sheet"><div class="free">${[[6,5,40,22],[52,4,42,18],[8,30,30,20],[42,26,26,24],[72,28,22,16],[6,54,46,18],[56,52,38,22],[10,76,34,18],[48,78,24,16],[76,78,18,16]].map((b,i)=>`<span style="left:${b[0]}%;top:${b[1]}%;width:${b[2]}%;height:${b[3]}%;transform:rotate(${(i%3-1)*2}deg)">${i+1}</span>`).join('')}<i>⋯</i></div><figcaption>正面：自己畫框，標號碼</figcaption></figure><figure class="sheet"><div class="free"><div class="ring">${STOPS.length}</div></div><figcaption>背面：最後一站</figcaption></figure></div><div class="go">第 1 到 ${STOPS.length-1} 站寫正面，框的大小、位置你決定；第 ${STOPS.length} 站寫背面正中間的大圓</div>`
+];
+CARDS.forEach((c, i) => cards.push(`<div class="q"><small>她剛說</small>${c[0]}</div><div class="you"><b>換你：</b>${c[1]}</div><div class="where">${cell(i+1)}</div>`));
+cards.push(`<div class="tape" style="background-color:var(--terra)"></div><div class="say">影片講完了</div>`);
+const panel = document.getElementById('panel');
+cards.forEach(html => { const d = document.createElement('div'); d.className = 'card'; d.innerHTML = html; panel.appendChild(d); });
+const els = [...panel.children];
+let k = 0;
+function show(i){ k = Math.max(0, Math.min(els.length - 1, i)); els.forEach((e, j) => e.classList.toggle('on', j === k)); document.querySelectorAll('#jump button').forEach((b, j) => b.classList.toggle('now', j + 1 === k)); }
+show(0);
+
+/* 2026-11-18 Kevin「試著拿掉」：影片停住時 YouTube 會蓋上播放鍵、標題、更多影片，擋住學生要畫的畫面。
+   停住時在影片上面蓋一張那一格的截圖（停點/01.jpg～16.jpg，720p，從影片抽的同一個時間），一播放就收起來；片尾蓋 Giertz 最後那一格，擋掉推薦影片。 */
+const still = document.getElementById('still');
+function cover(src){ /* 公開版不蓋截圖（TED 條款不准分享片段） */ }
+still.addEventListener('click', () => resume());
+// 截圖先載進來，停的那一刻才不會空一下
+/* 公開版沒有截圖，不預載 */
+let player = null, next = 0, backTo = null;   // backTo：停下來之後要退回的那一格，等真的暫停了才退，退了也還是停著
+function resetNext(t){ next = STOPS.findIndex(s => s > t + 0.3); if (next < 0) next = STOPS.length; }
+function onYouTubeIframeAPIReady(){
+  player = new YT.Player('yt', {
+    videoId: VIDEO,
+    playerVars: { cc_load_policy: 0, hl: 'zh-TW', rel: 0, modestbranding: 1, playsinline: 1 },
+    events: {
+      onStateChange: e => {
+        if (e.data === YT.PlayerState.PLAYING) { still.classList.remove('on'); resetNext(player.getCurrentTime()); try { player.setOption('captions', 'track', {}); player.unloadModule('captions'); } catch (err) {} }
+        if (e.data === YT.PlayerState.PAUSED && backTo !== null) { const b = backTo; backTo = null; if (Math.abs(player.getCurrentTime() - b) > 0.05) player.seekTo(b, true); }
+        if (e.data === YT.PlayerState.ENDED) { cover('停點/結束.jpg'); show(els.length - 1); }
+      }
+    }
+  });
+  const sub = document.getElementById('sub');
+  setInterval(() => {
+    if (!player || !player.getCurrentTime) return;
+    const tt = player.getCurrentTime();
+    const c = CUES.find(c => tt >= c[0] && tt < c[1] + 0.25);
+    const txt = c ? c[2] : '';
+    if (sub.textContent !== txt) sub.textContent = txt;
+  }, 120);
+  setInterval(() => {
+    if (!player || !player.getPlayerState || player.getPlayerState() !== YT.PlayerState.PLAYING) return;
+    const t = player.getCurrentTime();
+    if (next < STOPS.length && t >= STOPS[next]) { backTo = STOPS[next]; player.pauseVideo(); cover('停點/' + String(next + 1).padStart(2, '0') + '.jpg'); show(next + 1); next++; }
+  }, 150);
+}
+/* 老師按（點停格卡、點影片、按空白鍵或 Enter）只有一個意思：繼續播。正在播的時候按，什麼都不做；停只由程式到點自己停。 */
+/* 2026-11-18 Kevin：「如果學生他跟我說可不可以倒帶，那這個時候就沒有這個功能了」。
+   倒回這一段的開頭（上一站停的地方，第一站就倒回影片開頭），接著播，到這一站會再停一次。
+   在一段開頭半秒內再按，就再往前一段，所以連按幾下可以倒回好幾站。 */
+function rewind(){
+  if (!player || !player.getCurrentTime) return;
+  const t = player.getCurrentTime();
+  let j = STOPS.findIndex(s => s > t - 0.5);
+  if (j < 0) j = STOPS.length;
+  const start = j > 0 ? STOPS[j - 1] : 12.0;
+  backTo = null; still.classList.remove('on');
+  player.seekTo(start, true); player.playVideo();
+}
+/* 2026-11-18 Kevin：有了 1～10 的數字鈕，「這一段重看」的鈕就不用了（← 鍵與簡報筆上一頁照舊是重看這一段）；
+   「收起來」從大地圖疊上層的下方正中間搬到這裡，左下角。單獨打開這一頁（不是疊在大地圖上）就不顯示。 */
+const closeBtn = document.getElementById('close');
+if (window.parent === window) closeBtn.style.visibility = 'hidden';
+closeBtn.addEventListener('click', e => { e.stopPropagation(); const x = window.parent.document.querySelector('#watchLayer .x'); if (x) x.click(); });
+/* 2026-11-18 Kevin：「如果他要看前幾段或者是後幾段那怎麼辦？」→ 1 到 10 每一站一顆，點第 n 站：從第 n−1 站停的地方播（第 1 站從開頭），播到第 n 站停。 */
+function jumpTo(n){
+  if (!player || !player.seekTo) return;
+  const start = n > 1 ? STOPS[n - 2] : 12.0;
+  backTo = null; still.classList.remove('on'); show(n - 1);
+  player.seekTo(start, true); player.playVideo();
+}
+STOPS.forEach((_, i) => { const b = document.createElement('button'); b.textContent = i + 1; b.title = '從第 ' + i + ' 站播到第 ' + (i + 1) + ' 站'; if (i === 0) b.title = '從開頭播到第 1 站';
+  b.addEventListener('click', e => { e.stopPropagation(); jumpTo(i + 1); }); document.getElementById('jump').appendChild(b); });
+function resume(){ if (!player || !player.getPlayerState) return; if (player.getPlayerState() !== YT.PlayerState.PLAYING) player.playVideo(); }
+panel.addEventListener('click', resume);
+document.getElementById('catch').addEventListener('click', resume);
+document.addEventListener('keydown', e => {
+  if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); resume(); }
+  if (e.key === 'ArrowRight') show(k + 1);
+  if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); rewind(); }
+});
+</script>
+<script src="https://www.youtube.com/iframe_api"></script>
+</body>
+</html>
