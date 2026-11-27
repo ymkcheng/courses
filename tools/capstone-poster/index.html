@@ -138,9 +138,10 @@ footer{padding:36px 0 60px;color:var(--sub);font-size:14px;border-top:1px solid 
 <h2><span class="stepno">3</span>跟 AI 一起做</h2>
 <p class="lead">AI 不會一開始就做海報。它會先檢查你們缺什麼、問你們問題，最後才排版。這是故意的。</p>
 <ol class="do">
-<li><div><h3>開一個新對話，上傳兩個檔和你們的材料</h3>上傳工具包裡的「給AI的說明書.md」和「範本_….html」，再加上你們的材料：現在的海報、專題報告、截圖、測試數據，還有<b>你們跟 AI 協作的對話紀錄</b>。<div class="note">AI 不收某個檔案的話，用記事本或 VS Code 打開那個檔，全選、複製、直接貼進對話。</div></div></li>
-<li><div><h3>貼上開場白</h3>
-<div class="prompt"><div class="bar"><span>開場白</span><button type="button" data-copy="p0">複製</button></div><pre id="p0">還沒選風格。回到第 1 步選好一款後，這裡會出現要貼給 AI 的開場白，自動帶入你們選的風格和選它的理由。</pre></div></div></li>
+<li><div><h3>開一個新對話，上傳兩個檔和你們的材料</h3>用你們平常的 AI（ChatGPT、Gemini、Claude、Copilot 都可以）開一個<b>新的</b>對話，上傳工具包裡的「給AI的說明書.md」和「範本_….html」，再加上你們的材料：現在的海報、專題報告、截圖、測試數據，還有<b>你們跟 AI 協作的對話紀錄</b>。<div class="note">AI 不收某個檔案的話，用記事本或 VS Code 打開那個檔，全選、複製、直接貼進對話。</div></div></li>
+<li><div><h3>複製下面這段，貼進同一個對話送出</h3>這段已經帶入你們選的風格和理由，不用改，直接複製貼上。
+<div class="prompt"><div class="bar"><span>開場白</span><button type="button" data-copy="p0">複製</button></div><pre id="p0">還沒選風格。回到第 1 步選好一款後，這裡會出現要貼給 AI 的開場白，自動帶入你們選的風格和選它的理由。</pre></div>
+<div class="note"><b>AI 的第一則回覆應該長這樣</b>：三句話講流程、一張 14 項的缺漏表、最多 5 個問題。如果它直接給了一張海報，或說它看不到說明書，回它：「請先完整讀完給AI的說明書.md，照第 0 步和第 1 步，只給缺漏表和問題，不要做海報。」</div></div></li>
 <li><div><h3>看缺漏表，回答 AI 的問題</h3>AI 會列出 14 個項目哪些齊全、哪些薄弱、哪些缺，然後問你們問題。<b>「人與 AI 的分工」那幾題最花時間，也只有你們能回答</b>：回頭翻你們的 AI 對話紀錄，找出你們做的決定、推翻 AI 的地方、AI 出錯被你們發現的地方。不知道的就說不知道，AI 會標成【待補】，不准它幫你們編。</div></li>
 <li><div><h3>拿到海報，存成 poster.html</h3>AI 通常會給一大段程式碼：複製下來，用 VS Code 或記事本存成 <b>poster.html</b>，放進海報資料夾，再用 Chrome 打開。<div class="note">程式碼結尾不是 &lt;/html&gt;，代表被截斷了，跟 AI 說「請從中斷的地方繼續」。</div></div></li>
 <li><div><h3>哪一塊不滿意，就只改那一塊</h3>不要說「再好看一點」。請它出幾個版本，你們挑「第幾版的哪一點」再要一輪。
@@ -255,9 +256,24 @@ function fit(){document.querySelectorAll('.thumb').forEach(t=>{t.querySelector('
 window.addEventListener('resize',fit);fit();
 const reason=document.getElementById('reason');
 function opening(){
- if(!picked)return;const s=STYLES.find(x=>x.id===picked);const r=reason.value.trim()||'【用一句話寫理由】';
- document.getElementById('p0').textContent='請先完整閱讀「給AI的說明書.md」（包含所有附錄），照裡面的工作流程一步一步帶我們。\n我們選的是'+s.name+'，範本檔是「'+FN[picked]+'」。選這款的理由：'+r+'\n我們的海報資料夾裡已經有這些圖：【列出檔名，例如 fig-hero.jpg、fig-1.png】\n以下是我們的材料：【上傳或貼上現在的海報、專題報告、截圖、測試數據、跟 AI 協作的對話紀錄】\n請先做第 0 步與第 1 步（缺漏表），不要直接產出海報。';
+ if(!picked)return;const s=STYLES.find(x=>x.id===picked);const r=reason.value.trim()||'【回到第 1 步寫一句理由，或在這裡直接改寫】';
+ document.getElementById('p0').textContent=
+'你好，我們是大同大學資訊工程學系的大四專題小組，要做展出用的專題海報。這次對話我們上傳了：\n'+
+'1.「給AI的說明書.md」：請從頭到尾讀完，包括所有附錄，之後每一步都照它做\n'+
+'2.「'+FN[picked]+'」：我們選的海報版型「'+s.name+'」\n'+
+'3. 我們現有的材料：舊海報、專題報告、截圖、測試數據、我們跟 AI 協作的對話紀錄（有什麼就傳什麼）\n\n'+
+'我們選這款的理由：'+r+'\n\n'+
+'請照說明書的工作流程一步一步帶我們，規則如下：\n'+
+'・這一則回覆先不要做海報，只給我們三樣東西：\n'+
+'　（1）用三句話說你讀到的流程，讓我們確認你讀完了\n'+
+'　（2）缺漏表：14 個項目逐項標出齊全、薄弱或缺，以及具體要補什麼\n'+
+'　（3）你要問我們的問題，一次最多 5 題\n'+
+'・我們回答完，你再進到下一步\n'+
+'・材料裡沒有的內容不要自己編，一律標【待補】\n'+
+'・「人與 AI 的分工」只能由我們回答，不要替我們寫\n'+
+'・全程用繁體中文';
 }
+
 function pick(id){
  picked=id;const s=STYLES.find(x=>x.id===id);
  document.querySelectorAll('.style').forEach(c=>c.classList.toggle('picked',c.id==='card-'+id));
