@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>風格 F 任務簡報｜專題海報範本</title>
+<!-- 字型：拉丁字 Barlow / Barlow Condensed（大寫標題）、JetBrains Mono（遙測數據）；中文 Noto Sans TC（思源黑體） -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@500;700&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<style>
+@page{size:594mm 841mm;margin:0}
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;background:#e9ebef}
+@media print{body{background:none}.poster{zoom:2.0045}}
+.poster{width:1120px;height:1584px;box-sizing:border-box;padding:30px 44px 26px;background:#000;color:#F2F2F2;font-family:Barlow,'Noto Sans TC',sans-serif;line-break:strict;display:flex;flex-direction:column;gap:11px;overflow:hidden}.poster>*{flex-shrink:0}
+.lab{font-size:13.5px;line-height:1.45}
+.cap{font-size:13.5px;color:#9C9C9C;margin-top:2px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.legend{display:flex;gap:12px}.legend span{display:flex;align-items:center;gap:4px}.legend i{display:inline-block;width:16px;height:10px}
+.m{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.14em;color:#9C9C9C;font-weight:400}
+.h{font-family:'Barlow Condensed','Noto Sans TC',sans-serif;font-weight:700;font-size:19px;margin:0 0 4px;display:flex;gap:10px;align-items:baseline}
+.sec{border-top:1px solid #3a3a3a;padding-top:6px;font-size:15.5px;line-height:1.6}
+.tl{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));position:relative}
+.tl:before{content:"";position:absolute;left:6px;right:6px;top:25px;border-top:1.5px solid #5a5a5a}
+.tl div{position:relative;padding-top:31px;padding-right:6px}
+.tl div:before{content:"";position:absolute;left:0;top:19px;width:11px;height:11px;border-radius:50%;background:#000;border:2px solid #F2F2F2}
+.tl div.h2:before{border-color:#FFB547;background:#FFB547}
+.tl b{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#9C9C9C;position:absolute;top:0;left:0;font-weight:600}
+.tm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-top:1px solid #3a3a3a;border-bottom:1px solid #3a3a3a}
+.tm div{padding:4px 6px}.tm div:nth-child(odd){padding-left:0}.tm div:nth-child(n+3){border-top:1px solid #3a3a3a}
+.tm b{display:block;font-family:'JetBrains Mono',monospace;font-size:21px;font-weight:600;color:#F2F2F2;line-height:1.2}
+</style>
+</head>
+<body>
+<div class="poster">
+<div style="display:flex;align-items:center;gap:18px;padding-bottom:10px;border-bottom:1px solid #F2F2F2"><img src="ttu-emblem.jpg" alt="大同大學校徽" style="width:66px;height:66px;border-radius:50%;object-fit:cover;background:#fff"><div style="font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:34px;line-height:1.2;color:#F2F2F2">115學年度資訊工程學系專題作品暨海報競賽</div></div>
+<!-- SLOT 4 主圖：滿版實拍（左下角放標題，照片左下要偏暗）＋ SLOT 1 標題 ＋ SLOT 3 摘要 ＋ SLOT 2 作者 -->
+<div style="margin:0 -44px;height:222px;position:relative;background:#1c1c1c;display:flex;align-items:center;justify-content:center;color:#8a8a8a;font-size:15px">
+<span style="position:absolute;top:44px">【fig-hero.jpg：滿版實拍照片，用 A／B／C 標註】</span>
+<div class="lab" style="position:absolute;top:14px;right:44px;text-align:right;color:#cfcfcf"><b style="color:#fff">組員 A、組員 B、組員 C</b><br>指導老師：鄭穎懋<br>大同大學資訊工程學系</div>
+<div style="position:absolute;left:44px;right:44px;bottom:16px">
+<div class="m">MISSION 01　·　A1 直式　·　範例內容，請替換</div>
+<h1 style="margin:4px 0 0;font-family:'Barlow Condensed','Noto Sans TC',sans-serif;font-weight:700;font-size:54px;line-height:1;letter-spacing:0.02em;color:#fff">FRIDGEMIND</h1>
+<div style="font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:28px;line-height:1.3;color:#fff;margin-top:4px">在對的時間問對的人，合租冰箱的剩菜就有了主人</div>
+<p style="margin:4px 0 0;font-size:16px;line-height:1.5;color:#d6d6d6">相機加語音的冰箱代理：記下每樣食物的主人與期限，快過期時先問主人，再問全家。</p></div></div>
+<!-- 任務時間軸：把一次完整運作寫成時間點（SLOT 9 的精簡版，詳細呼叫見下方循序圖） -->
+<div style="display:grid;grid-template-columns:118px 1fr;gap:10px;align-items:start"><div class="h" style="flex-direction:column;gap:0;margin-top:-2px"><span class="m">MISSION TIMELINE</span>任務時間軸</div><div class="tl">
+<div class="lab "><b>T+0 s</b>開門放入食物</div><div class="lab "><b>T+2 s</b>ESP32-CAM 上傳照片</div><div class="lab "><b>T+4 s</b>VLM 辨識容器</div><div class="lab "><b>T+10 s</b>語音標註「我的，週四」</div><div class="lab h2"><b>T−24 h</b>到期前推播給主人</div><div class="lab h2"><b>T+24 h</b>主人未回，改問全家</div></div></div>
+<!-- SLOT 8 系統架構圖：部署區域、實際技術、協定與資料、AI 元件與人訂規則。替換成你們系統的真實元件 -->
+<div class="sec"><div class="h"><span class="m">SYSTEM ARCHITECTURE</span>系統架構</div>
+<svg viewBox="0 0 1000 318" width="100%" role="img" aria-label="系統架構圖" style="display:block;font-family:Barlow,'Noto Sans TC',sans-serif">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#F2F2F2"/></marker></defs>
+<rect x="5" y="24" width="130" height="270" rx="8" fill="#0A0A0A" stroke="#9C9C9C" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="15" y="42" font-size="12.5" font-weight="700" fill="#9C9C9C">使用者端</text>
+<rect x="150" y="24" width="170" height="270" rx="8" fill="#0A0A0A" stroke="#9C9C9C" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="160" y="42" font-size="12.5" font-weight="700" fill="#9C9C9C">家中（Wi-Fi）</text>
+<rect x="335" y="24" width="435" height="270" rx="8" fill="#0A0A0A" stroke="#9C9C9C" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="345" y="42" font-size="12.5" font-weight="700" fill="#9C9C9C">雲端後端　Firebase · Cloud Functions（Node.js／TypeScript）</text>
+<rect x="785" y="24" width="195" height="270" rx="8" fill="#0A0A0A" stroke="#9C9C9C" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="795" y="42" font-size="12.5" font-weight="700" fill="#9C9C9C">第三方服務</text>
+<rect x="20" y="62" width="100" height="46" rx="5" fill="#121212" stroke="#F2F2F2" stroke-width="1.5"/>
+<text x="70.0" y="79.0" text-anchor="middle" font-size="14" font-weight="700" fill="#F2F2F2">使用者</text>
+<text x="70.0" y="97.0" text-anchor="middle" font-size="12" fill="#9C9C9C">室友</text>
+<rect x="20" y="206" width="100" height="52" rx="5" fill="#121212" stroke="#F2F2F2" stroke-width="1.5"/>
+<text x="70.0" y="226.0" text-anchor="middle" font-size="14" font-weight="700" fill="#F2F2F2">LINE App</text>
+<text x="70.0" y="244.0" text-anchor="middle" font-size="12" fill="#9C9C9C">手機</text>
+<rect x="165" y="62" width="140" height="46" rx="5" fill="#121212" stroke="#F2F2F2" stroke-width="1.5"/>
+<text x="235.0" y="79.0" text-anchor="middle" font-size="14" font-weight="700" fill="#F2F2F2">門磁感測器</text>
+<text x="235.0" y="97.0" text-anchor="middle" font-size="12" fill="#9C9C9C">磁簧開關</text>
+<rect x="165" y="152" width="140" height="56" rx="5" fill="#121212" stroke="#F2F2F2" stroke-width="1.5"/>
+<text x="235.0" y="174.0" text-anchor="middle" font-size="14" font-weight="700" fill="#F2F2F2">ESP32-CAM</text>
+<text x="235.0" y="192.0" text-anchor="middle" font-size="12" fill="#9C9C9C">C++ · Arduino</text>
+<rect x="350" y="62" width="190" height="52" rx="5" fill="#121212" stroke="#F2F2F2" stroke-width="1.5"/>
+<text x="445.0" y="82.0" text-anchor="middle" font-size="14" font-weight="700" fill="#F2F2F2">LINE Webhook</text>
+<text x="445.0" y="100.0" text-anchor="middle" font-size="12" fill="#9C9C9C">解析語音與文字</text>
+<rect x="560" y="62" width="195" height="52" rx="5" fill="#121212" stroke="#FFB547" stroke-width="2.4"/>
+<text x="657.5" y="82.0" text-anchor="middle" font-size="14" font-weight="700" fill="#F2F2F2">提醒排程</text>
+<text x="657.5" y="100.0" text-anchor="middle" font-size="12" fill="#9C9C9C">Cloud Scheduler 每小時</text>
+<rect x="697" y="53" width="58" height="17" rx="3" fill="#FFB547"/><text x="726" y="65.5" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">人訂規則</text>
+<rect x="350" y="152" width="190" height="52" rx="5" fill="#121212" stroke="#F2F2F2" stroke-width="1.5"/>
+<text x="445.0" y="172.0" text-anchor="middle" font-size="14" font-weight="700" fill="#F2F2F2">影像上傳 API</text>
+<text x="445.0" y="190.0" text-anchor="middle" font-size="12" fill="#9C9C9C">HTTPS POST /upload</text>
+<rect x="560" y="152" width="195" height="52" rx="5" fill="#121212" stroke="#F2F2F2" stroke-width="1.5"/>
+<text x="657.5" y="172.0" text-anchor="middle" font-size="14" font-weight="700" fill="#F2F2F2">歸屬服務</text>
+<text x="657.5" y="190.0" text-anchor="middle" font-size="12" fill="#9C9C9C">判定主人、期限</text>
+<path d="M350,235 A95.0,9 0 0 1 540,235 L540,277 A95.0,9 0 0 1 350,277 Z" fill="#121212" stroke="#F2F2F2" stroke-width="1.5"/>
+<path d="M350,235 A95.0,9 0 0 0 540,235" fill="none" stroke="#F2F2F2" stroke-width="1.5"/>
+<text x="445.0" y="259.0" text-anchor="middle" font-size="14" font-weight="700" fill="#F2F2F2">Cloud Storage</text>
+<text x="445.0" y="276.0" text-anchor="middle" font-size="12" fill="#9C9C9C">冰箱照片</text>
+<path d="M560,235 A97.5,9 0 0 1 755,235 L755,277 A97.5,9 0 0 1 560,277 Z" fill="#121212" stroke="#F2F2F2" stroke-width="1.5"/>
+<path d="M560,235 A97.5,9 0 0 0 755,235" fill="none" stroke="#F2F2F2" stroke-width="1.5"/>
+<text x="657.5" y="259.0" text-anchor="middle" font-size="14" font-weight="700" fill="#F2F2F2">Firestore</text>
+<text x="657.5" y="276.0" text-anchor="middle" font-size="12" fill="#9C9C9C">items · owners · homes</text>
+<rect x="800" y="62" width="165" height="52" rx="5" fill="#121212" stroke="#F2F2F2" stroke-width="1.5" stroke-dasharray="6 3"/>
+<text x="882.5" y="82.0" text-anchor="middle" font-size="14" font-weight="700" fill="#F2F2F2">LINE Messaging API</text>
+<text x="882.5" y="100.0" text-anchor="middle" font-size="12" fill="#9C9C9C">Webhook · Push</text>
+<rect x="800" y="152" width="165" height="52" rx="5" fill="#121212" stroke="#6FB7FF" stroke-width="2.4"/>
+<text x="882.5" y="172.0" text-anchor="middle" font-size="14" font-weight="700" fill="#F2F2F2">VLM 視覺語言模型</text>
+<text x="882.5" y="190.0" text-anchor="middle" font-size="12" fill="#9C9C9C">REST API</text>
+<rect x="935" y="143" width="30" height="17" rx="3" fill="#6FB7FF"/><text x="950" y="155.5" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">AI</text>
+<path d="M235,108 L235,152" fill="none" stroke="#F2F2F2" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="241" y="135" text-anchor="start" font-size="12" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">GPIO 中斷</text>
+<path d="M70,108 L70,206" fill="none" stroke="#F2F2F2" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="76" y="160" text-anchor="start" font-size="12" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">說話／點選</text>
+<path d="M305,178 L350,178" fill="none" stroke="#F2F2F2" stroke-width="1.5" marker-end="url(#ah)"/>
+<path d="M882,62 L882,14 L445,14 L445,62" fill="none" stroke="#F2F2F2" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="660" y="18" text-anchor="middle" font-size="12" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">Webhook（JSON）</text>
+<path d="M445,204 L445,226" fill="none" stroke="#F2F2F2" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="451" y="220" text-anchor="start" font-size="12" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">存照片</text>
+<path d="M540,170 L560,170" fill="none" stroke="#F2F2F2" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="550" y="146" text-anchor="middle" font-size="11.5" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4">照片 URL</text>
+<path d="M540,88 L550,88 L550,130 L640,130 L640,152" fill="none" stroke="#F2F2F2" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="600" y="126" text-anchor="middle" font-size="12" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">語意</text>
+<path d="M657,114 L657,152" fill="none" stroke="#FFB547" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="663" y="138" text-anchor="start" font-size="12" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">觸發</text>
+<path d="M700,204 L700,226" fill="none" stroke="#F2F2F2" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="706" y="220" text-anchor="start" font-size="12" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">讀寫 owner、expiry</text>
+<path d="M755,188 L800,188" fill="none" stroke="#6FB7FF" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="778" y="183" text-anchor="middle" font-size="12" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">辨識</text>
+<path d="M755,162 L778,162 L778,96 L800,96" fill="none" stroke="#F2F2F2" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="781" y="128" text-anchor="start" font-size="12" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">Push</text>
+<path d="M70,258 L70,310 L990,310 L990,88 L965,88" fill="none" stroke="#F2F2F2" stroke-width="1.5" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<text x="520" y="305" text-anchor="middle" font-size="12" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">訊息 ⇄ 推播（LINE 平台）</text>
+</svg>
+<div class="cap">圖 1　系統架構（C4 Container 層級）：四個部署區域，箭頭標示協定與資料<div class="legend"><span><i style="border:2.4px solid #6FB7FF"></i>AI 元件</span><span><i style="border:2.4px solid #FFB547"></i>人訂規則</span><span><i style="border:1.5px dashed #F2F2F2"></i>外部服務</span><span><i style="border:1.5px solid #F2F2F2;border-radius:50%/30%"></i>資料儲存</span></div></div></div>
+<!-- SLOT 9 系統運作流程圖：UML 循序圖（生命線、活化條、編號訊息、回傳虛線、alt 框、非同步分隔）。替換成你們系統的真實呼叫 -->
+<div class="sec"><div class="h"><span class="m">SEQUENCE OF OPERATIONS</span>系統運作流程</div>
+<svg viewBox="0 0 1000 352" width="100%" role="img" aria-label="UML 循序圖" style="display:block;font-family:Barlow,'Noto Sans TC',sans-serif">
+<defs><marker id="sa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#F2F2F2"/></marker><marker id="sb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10" fill="none" stroke="#F2F2F2" stroke-width="1.5"/></marker><marker id="sc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#6FB7FF"/></marker></defs>
+<rect x="6" y="4" width="144" height="30" rx="4" fill="#121212" stroke="#F2F2F2" stroke-width="1.5"/>
+<text x="78" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#F2F2F2">使用者</text>
+<line x1="78" y1="34" x2="78" y2="348" stroke="#9C9C9C" stroke-width="1.2" stroke-dasharray="4 4"/>
+<rect x="153" y="4" width="144" height="30" rx="4" fill="#121212" stroke="#F2F2F2" stroke-width="1.5"/>
+<text x="225" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#F2F2F2">ESP32-CAM</text>
+<line x1="225" y1="34" x2="225" y2="348" stroke="#9C9C9C" stroke-width="1.2" stroke-dasharray="4 4"/>
+<rect x="348" y="4" width="144" height="30" rx="4" fill="#121212" stroke="#F2F2F2" stroke-width="1.5"/>
+<text x="420" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#F2F2F2">後端 Cloud Functions</text>
+<line x1="420" y1="34" x2="420" y2="348" stroke="#9C9C9C" stroke-width="1.2" stroke-dasharray="4 4"/>
+<rect x="518" y="4" width="144" height="30" rx="4" fill="#121212" stroke="#F2F2F2" stroke-width="1.5"/>
+<text x="590" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#F2F2F2">VLM API</text>
+<line x1="590" y1="34" x2="590" y2="348" stroke="#9C9C9C" stroke-width="1.2" stroke-dasharray="4 4"/>
+<rect x="673" y="4" width="144" height="30" rx="4" fill="#121212" stroke="#F2F2F2" stroke-width="1.5"/>
+<text x="745" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#F2F2F2">Firestore</text>
+<line x1="745" y1="34" x2="745" y2="348" stroke="#9C9C9C" stroke-width="1.2" stroke-dasharray="4 4"/>
+<rect x="843" y="4" width="144" height="30" rx="4" fill="#121212" stroke="#F2F2F2" stroke-width="1.5"/>
+<text x="915" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#F2F2F2">LINE 平台</text>
+<line x1="915" y1="34" x2="915" y2="348" stroke="#9C9C9C" stroke-width="1.2" stroke-dasharray="4 4"/>
+<rect x="414" y="70" width="12" height="122" fill="#121212" stroke="#F2F2F2" stroke-width="1.3"/>
+<rect x="414" y="216" width="12" height="84" fill="#121212" stroke="#F2F2F2" stroke-width="1.3"/>
+<line x1="78" y1="56" x2="225" y2="56" stroke="#F2F2F2" stroke-width="1.5" marker-end="url(#sa)"/>
+<text x="151.5" y="51" text-anchor="middle" font-size="12" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">1. 開門放入食物</text>
+<line x1="225" y1="78" x2="414" y2="78" stroke="#F2F2F2" stroke-width="1.5" marker-end="url(#sa)"/>
+<text x="319.5" y="73" text-anchor="middle" font-size="12" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">2. POST /upload（JPEG）</text>
+<line x1="426" y1="100" x2="590" y2="100" stroke="#6FB7FF" stroke-width="1.5" marker-end="url(#sc)"/>
+<text x="508.0" y="95" text-anchor="middle" font-size="12" fill="#6FB7FF" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">3. detect(image)</text>
+<line x1="590" y1="122" x2="426" y2="122" stroke="#F2F2F2" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#sb)"/>
+<text x="508.0" y="117" text-anchor="middle" font-size="12" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">4. {item, container}</text>
+<line x1="78" y1="142" x2="915" y2="142" stroke="#F2F2F2" stroke-width="1.5" marker-end="url(#sa)"/>
+<text x="496.5" y="137" text-anchor="middle" font-size="12" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">5. 語音「我的，週四」</text>
+<line x1="915" y1="164" x2="426" y2="164" stroke="#F2F2F2" stroke-width="1.5" marker-end="url(#sa)"/>
+<text x="670.5" y="159" text-anchor="middle" font-size="12" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">6. Webhook {userId, text}</text>
+<line x1="426" y1="186" x2="745" y2="186" stroke="#F2F2F2" stroke-width="1.5" marker-end="url(#sa)"/>
+<text x="585.5" y="181" text-anchor="middle" font-size="12" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">7. set(item, owner, expiry)</text>
+<line x1="10" y1="206" x2="990" y2="206" stroke="#FFB547" stroke-width="1.3" stroke-dasharray="2 4"/>
+<text x="500" y="202" text-anchor="middle" font-size="12" font-weight="700" fill="#FFB547" paint-order="stroke" stroke="#0A0A0A" stroke-width="5">⋯ 非同步：Cloud Scheduler 每小時觸發（人訂規則：到期前 24 小時）⋯</text>
+<line x1="426" y1="224" x2="745" y2="224" stroke="#F2F2F2" stroke-width="1.5" marker-end="url(#sa)"/>
+<text x="585.5" y="219" text-anchor="middle" font-size="12" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">8. query(expiry &lt; now + 24h)</text>
+<line x1="745" y1="246" x2="426" y2="246" stroke="#F2F2F2" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#sb)"/>
+<text x="585.5" y="241" text-anchor="middle" font-size="12" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">9. items[ ]</text>
+<line x1="426" y1="268" x2="915" y2="268" stroke="#F2F2F2" stroke-width="1.5" marker-end="url(#sa)"/>
+<text x="670.5" y="263" text-anchor="middle" font-size="12" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">10. Push API → 主人</text>
+<line x1="915" y1="290" x2="78" y2="290" stroke="#F2F2F2" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#sb)"/>
+<text x="496.5" y="285" text-anchor="middle" font-size="12" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">11. 「你的咖哩明天到期，要吃嗎？」</text>
+<rect x="12" y="300" width="976" height="48" fill="none" stroke="#F2F2F2" stroke-width="1.3"/>
+<path d="M12,300 h46 v14 l-8,8 h-38 z" fill="#121212" stroke="#F2F2F2" stroke-width="1.3"/><text x="20" y="315" font-size="12" font-weight="700" fill="#F2F2F2">alt</text>
+<text x="66" y="315" font-size="12" fill="#F2F2F2">[主人 24 小時未回應]</text>
+<line x1="426" y1="336" x2="915" y2="336" stroke="#F2F2F2" stroke-width="1.5" marker-end="url(#sa)"/>
+<text x="670.5" y="331" text-anchor="middle" font-size="12" fill="#F2F2F2" paint-order="stroke" stroke="#0A0A0A" stroke-width="4" stroke-linejoin="round">12. Push API → 全家（人訂規則）</text>
+</svg>
+<div class="cap">圖 2　UML 循序圖：放入食物、標註主人，到期前由排程觸發提醒</div></div>
+<div style="display:grid;grid-template-columns:1fr 1.3fr 1.05fr 1fr;gap:18px;flex:1">
+<!-- SLOT 5 ＋ 6 ＋ 7 --><div class="sec"><div class="h"><span class="m"></span>問題</div>合租公寓的剩菜沒有明確主人；誰買的、何時過期，別人都看不到，食物就默默壞掉。<br><span class="lab" style="color:#bdbdbd">既有冰箱庫存 App 記錄「有什麼」，不記錄「是誰的」[1, 2]。</span><div style="margin-top:4px"><b>研究問題</b>　語音代理能否讓歸屬與期限變得可見，又不增加家事負擔？</div></div>
+<!-- SLOT 10 --><div class="sec"><div class="h"><span class="m"></span>人與 AI 的分工</div><div class="lab" style="display:grid;grid-template-columns:0.8fr 1.3fr 1.1fr;border-top:1.5px solid #777"><b style="padding:3px 2px;border-bottom:1px solid #333">決定</b><b style="padding:3px 2px;border-bottom:1px solid #333">我們</b><b style="padding:3px 2px;border-bottom:1px solid #333">AI</b><span style="padding:3px 2px;border-bottom:1px solid #333">問題範圍</span><span style="padding:3px 2px;border-bottom:1px solid #333">選「歸屬」不選「庫存」</span><span style="padding:3px 2px;border-bottom:1px solid #333">整理訪談逐字稿</span><span style="padding:3px 2px;border-bottom:1px solid #333">系統架構</span><span style="padding:3px 2px;border-bottom:1px solid #333">三案選一、設成本上限</span><span style="padding:3px 2px;border-bottom:1px solid #333">提出三種架構草案</span><span style="padding:3px 2px;border-bottom:1px solid #333">程式實作</span><span style="padding:3px 2px;border-bottom:1px solid #333">審查合併、寫測試</span><span style="padding:3px 2px;border-bottom:1px solid #333">撰寫約 [XX]%</span><span style="padding:3px 2px;border-bottom:1px solid #333">提醒時機</span><span style="padding:3px 2px;border-bottom:1px solid #333"><b>推翻 AI</b></span><span style="padding:3px 2px;border-bottom:1px solid #333">建議每小時提醒</span></div><div class="lab" style="margin-top:6px;color:#d6d6d6"><b style="color:#FFB547">AI 出錯：</b>VLM 認錯 [XX]% 的容器；我們改用語音標註主人，而不是再訓練模型。</div></div>
+<!-- SLOT 11 評估（遙測式數字，先放最重要的）＋ 12 --><div class="sec"><div class="h"><span class="m"></span>評估與落差</div><div class="tm lab"><div><b>−[XX]%</b>每戶每週過期件數</div><div><b>[N]×[N]</b>戶 × 週，實地部署</div><div><b>[XX] s</b>開門到記錄完成</div><div><b>[XX]%</b>程式碼由 AI 產出，全數審查</div></div><div class="lab" style="margin-top:5px"><b>預期</b>提醒越多、浪費越少；<b>實際</b>頻繁提醒被靜音，一次準時的提問更有效；<b>改進</b>提醒策略從頻率改為時機。</div></div>
+<!-- SLOT 13 ＋ 14 --><div class="sec"><div class="h"><span class="m"></span>限制與下一次任務</div><span class="lab">樣本小、單一校園。未來：裝置端辨識保護隱私、多冰箱家庭、共同費用分攤。</span><div style="font-weight:700;margin:4px 0 6px">家庭代理什麼時候該只對一個人說，什麼時候該對全家說？</div><div style="display:flex;gap:10px"><div style="display:flex;flex-direction:column;align-items:center;gap:2px;font-size:13px;font-weight:700"><div style="width:44px;height:44px;border:2px solid #F2F2F2;border-radius:0px;background:#F2F2F2;color:#000;display:flex;align-items:center;justify-content:center">QR</div>影片</div><div style="display:flex;flex-direction:column;align-items:center;gap:2px;font-size:13px;font-weight:700"><div style="width:44px;height:44px;border:2px solid #F2F2F2;border-radius:0px;background:#F2F2F2;color:#000;display:flex;align-items:center;justify-content:center">QR</div>Demo</div><div style="display:flex;flex-direction:column;align-items:center;gap:2px;font-size:13px;font-weight:700"><div style="width:44px;height:44px;border:2px solid #F2F2F2;border-radius:0px;background:#F2F2F2;color:#000;display:flex;align-items:center;justify-content:center">QR</div>GitHub</div></div><div class="lab" style="color:#9C9C9C;margin-top:4px">[1] 作者，題名，會議，年份。<br>[2] 作者，題名，會議，年份。</div></div></div>
+</div>
+</body>
+</html>
