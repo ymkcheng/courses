@@ -15,6 +15,8 @@ header.top{border-bottom:1px solid var(--line);position:sticky;top:0;background:
 header.top .wrap{display:flex;gap:20px;align-items:center;height:56px;overflow-x:auto;white-space:nowrap;font-size:15px}
 header.top a{text-decoration:none;color:var(--sub)}header.top a:hover{color:var(--ink)}
 header.top b{color:var(--ink)}
+header.top .wrap>*{flex:none}
+.mobile-only{display:none}
 .hero{padding:56px 0 36px}
 .kicker{font-size:14px;font-weight:700;color:var(--sub)}
 h1{font-size:42px;line-height:1.25;margin:8px 0 16px;font-weight:900;text-wrap:balance}
@@ -71,7 +73,16 @@ details>div{margin-top:10px;font-size:16px}
 .modal .close{position:fixed;top:16px;right:16px;background:#fff}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:6px;font-size:15px;display:none;z-index:30}
 footer{padding:36px 0 60px;color:var(--sub);font-size:14px;border-top:1px solid var(--line)}
-@media (max-width:700px){h1{font-size:30px}h2{font-size:24px}.road{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:700px){h1{font-size:30px}h2{font-size:24px}.road{grid-template-columns:repeat(2,minmax(0,1fr))}
+.mobile-only{display:block}
+header.top .wrap{gap:16px;font-size:14px}
+.lead{font-size:17px}
+.tablebox table,.tablebox tbody,.tablebox tr,.tablebox td,.tablebox th{display:block;width:auto!important}
+.tablebox tr:first-child:has(th){display:none}
+.tablebox tr{padding:10px 0;border-bottom:1px solid var(--line)}
+.tablebox td{border:0!important;padding:2px 0!important}
+.tablebox td:first-child{font-weight:700}
+.prompt pre{font-size:14px}}
 </style>
 </head>
 <body>
@@ -85,6 +96,7 @@ footer{padding:36px 0 60px;color:var(--sub);font-size:14px;border-top:1px solid 
 <h1>選一款風格<br>和你們的 AI 一起完成專題海報</h1>
 <p class="lead">照順序做五件事就好。ChatGPT、Gemini、Claude、Copilot 都可以用，免費版也行。三個人圍著一台電腦，第一次坐下來大約 90 分鐘可以拿到初稿。</p>
 <p class="lead" style="font-size:17px;color:var(--sub)">為什麼要這樣做：程式大部分可以由 AI 寫，評審想看的就不只是技術困難怎麼解決，而是你們怎麼帶領 AI，讓三個人做出一個部門的規模。所以海報除了問題、系統、測試與落差，還要清楚呈現哪些判斷是你們做的。</p>
+<div class="note mobile-only" style="margin:0 0 16px;padding:12px 14px;background:#FFF6E0;border-radius:10px;font-size:16px;color:#5a4300"><b>用手機看的話</b>：第 1 步看風格、第 5 步練習跟評審說，用手機就可以。第 2 到 4 步要下載檔案、上傳給 AI、存海報，請用電腦做。</div>
 <div class="road">
 <a href="#s1"><div class="n">1</div><b>看十款風格，選一款</b><span>約 15 分鐘</span></a>
 <a href="#s2"><div class="n">2</div><b>下載海報工具包</b><span>一個檔，約 5 分鐘</span></a>
@@ -112,6 +124,7 @@ footer{padding:36px 0 60px;color:var(--sub);font-size:14px;border-top:1px solid 
 <h2><span class="stepno">2</span>下載你們的海報工具包</h2>
 <p class="lead">只要下載這一個檔。它會依你們選的風格打包好。</p>
 <button type="button" class="primary big" id="dlKit" disabled>請先在上一步選風格</button>
+<p class="mobile-only" style="margin:8px 0 0;font-size:15px;color:var(--sub)">在手機上下載的 zip 不好用，請用電腦打開這一頁再下載。手機上先選好風格也沒關係，到電腦上再選一次就好。</p>
 <div class="kit">
 <div class="card"><h3>解壓縮後，這個資料夾就是你們的海報資料夾</h3>
 <pre class="tree" id="kitTree">海報資料夾/
