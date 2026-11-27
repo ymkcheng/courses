@@ -140,7 +140,7 @@ footer{padding:36px 0 60px;color:var(--sub);font-size:14px;border-top:1px solid 
 <ol class="do">
 <li><div><h3>開一個新對話，上傳兩個檔和你們的材料</h3>上傳工具包裡的「給AI的說明書.md」和「範本_….html」，再加上你們的材料：現在的海報、專題報告、截圖、測試數據，還有<b>你們跟 AI 協作的對話紀錄</b>。<div class="note">AI 不收某個檔案的話，用記事本或 VS Code 打開那個檔，全選、複製、直接貼進對話。</div></div></li>
 <li><div><h3>貼上開場白</h3>
-<div class="prompt"><div class="bar"><span>開場白</span><button type="button" data-copy="p0">複製</button></div><pre id="p0">（請先在第 1 步選風格，這裡會自動產生）</pre></div></div></li>
+<div class="prompt"><div class="bar"><span>開場白</span><button type="button" data-copy="p0">複製</button></div><pre id="p0">還沒選風格。回到第 1 步選好一款後，這裡會出現要貼給 AI 的開場白，自動帶入你們選的風格和選它的理由。</pre></div></div></li>
 <li><div><h3>看缺漏表，回答 AI 的問題</h3>AI 會列出 14 個項目哪些齊全、哪些薄弱、哪些缺，然後問你們問題。<b>「人與 AI 的分工」那幾題最花時間，也只有你們能回答</b>：回頭翻你們的 AI 對話紀錄，找出你們做的決定、推翻 AI 的地方、AI 出錯被你們發現的地方。不知道的就說不知道，AI 會標成【待補】，不准它幫你們編。</div></li>
 <li><div><h3>拿到海報，存成 poster.html</h3>AI 通常會給一大段程式碼：複製下來，用 VS Code 或記事本存成 <b>poster.html</b>，放進海報資料夾，再用 Chrome 打開。<div class="note">程式碼結尾不是 &lt;/html&gt;，代表被截斷了，跟 AI 說「請從中斷的地方繼續」。</div></div></li>
 <li><div><h3>哪一塊不滿意，就只改那一塊</h3>不要說「再好看一點」。請它出幾個版本，你們挑「第幾版的哪一點」再要一輪。
@@ -294,7 +294,7 @@ const modal=document.getElementById('modal'),mf=document.getElementById('modalFr
 function openModal(id){const sc=Math.min((window.innerHeight-60)/1584,(window.innerWidth-40)/1120);mf.style.width=1120*sc+'px';mf.style.height=1584*sc+'px';mf.innerHTML='';const f=document.createElement('iframe');f.title='海報放大';f.srcdoc=frameDoc(id);f.style.transform='scale('+sc+')';mf.appendChild(f);modal.classList.add('open');document.getElementById('closeModal').focus()}
 function closeModal(){modal.classList.remove('open');mf.innerHTML=''}
 document.getElementById('closeModal').addEventListener('click',closeModal);modal.addEventListener('click',e=>{if(e.target===modal)closeModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal.classList.contains('open'))closeModal()});
-document.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',async()=>{const t=document.getElementById(b.dataset.copy).textContent;try{await navigator.clipboard.writeText(t)}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove()}say('已複製')}));
+document.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',async()=>{if(b.dataset.copy==='p0'&&!picked){say('請先在第 1 步選風格');document.getElementById('s1').scrollIntoView({behavior:'smooth'});return}const t=document.getElementById(b.dataset.copy).textContent;try{await navigator.clipboard.writeText(t)}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove()}say('已複製')}));
 }
 </script>
 </body>
